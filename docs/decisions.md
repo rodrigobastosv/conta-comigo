@@ -239,8 +239,42 @@ voice list as its test fixture, so this stays fixed.
 "Suitable for a 5-year-old" is not testable. "Average sentence of 8 to 14 words"
 and "90 to 140 words in this scene" are.
 
-That is what the evaluation set will measure on every prompt change. A rule that
-cannot be measured does not go into [lib/prompts/v1.ts](../lib/prompts/v1.ts).
+That is what [scripts/eval.ts](../scripts/eval.ts) measures on every prompt
+change. A rule that cannot be measured does not go into
+[lib/prompts/v1.ts](../lib/prompts/v1.ts).
+
+### What the first run found
+
+`v2` scores **4/10**, and the failures are not random — they say the prompt and
+its own rules disagree:
+
+- **`ouvir` sentences come out shorter than the rule allows.** Four of the six
+  `ouvir` cases land between 5.8 and 7.7 mean words per sentence, against a floor
+  of 8. The same prompt that sets that floor also says *"Uma ideia por frase"*,
+  and one idea in Portuguese, for a five-year-old, is usually under eight words.
+  The instruction is pulling against itself.
+- **Choice labels occasionally run to 5 words** where `ouvir` allows 2–4.
+- Word counts are inside range in all ten, the refrain appears in all ten, and
+  **no case needed a second attempt** — the structural contract is solid; it is
+  the prose targets that are off.
+
+Two ways to close it, and it is a prose decision, not a code one: lower the floor
+to what a five-year-old actually wants, or make the prompt defend it. Either way
+the change starts in [story-bible.md](story-bible.md) — and the number to beat is
+in [lib/eval/baseline.json](../lib/eval/baseline.json).
+
+There is also a wording gap worth reconciling: this document says "average
+sentence", the prompt says *"Frases de 8 a 14 palavras"* — every sentence. The
+evaluation measures the average, following this document, because prose wins. If
+the intent is per-sentence, say so here first.
+
+### The rules are a transcription, not an opinion
+
+[lib/eval/rules.ts](../lib/eval/rules.ts) restates the numbers from
+[lib/prompts/v1.ts](../lib/prompts/v1.ts). Change one without the other and the
+evaluation is measuring a rule the model was never given — which is the one
+failure mode that makes an evaluation actively harmful. Same reason the ten cases
+are fixed: **never edit a case to make a run pass.**
 
 ## The generation ceiling is on the server
 

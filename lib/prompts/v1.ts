@@ -1,4 +1,4 @@
-import { FINAL_BEAT, type ReadingLevel, type SceneRequest } from "@/lib/types";
+import { FINAL_BEAT, type ReadingLevel, type SceneRequest } from "../types.ts";
 
 /**
  * Prompt version. Raise this whenever the constitution or the level rules change

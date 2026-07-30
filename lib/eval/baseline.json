@@ -1,0 +1,147 @@
+{
+  "note": "Baseline for this prompt version. Committed on purpose: it is the reference every later run is compared against. Regenerate with `npm run eval` and update this file deliberately, never automatically.",
+  "promptVersion": "v2",
+  "model": "claude-opus-5",
+  "effort": "low",
+  "passed": 4,
+  "total": 10,
+  "regenerations": 0,
+  "results": [
+    {
+      "id": "ouvir-abertura",
+      "beat": 1,
+      "level": "ouvir",
+      "ok": false,
+      "words": 125,
+      "meanSentenceWords": 7.8,
+      "hasRefrain": true,
+      "violations": [
+        {
+          "severity": "fail",
+          "rule": "mean-sentence-words",
+          "detail": "7.8 not in 8–14"
+        }
+      ]
+    },
+    {
+      "id": "ouvir-batida-2",
+      "beat": 2,
+      "level": "ouvir",
+      "ok": false,
+      "words": 112,
+      "meanSentenceWords": 10.2,
+      "hasRefrain": true,
+      "violations": [
+        {
+          "severity": "fail",
+          "rule": "choice-label-words",
+          "detail": "choice 1 has 5 words, allowed 2–4"
+        }
+      ]
+    },
+    {
+      "id": "ouvir-batida-3",
+      "beat": 3,
+      "level": "ouvir",
+      "ok": false,
+      "words": 117,
+      "meanSentenceWords": 5.8,
+      "hasRefrain": true,
+      "violations": [
+        {
+          "severity": "fail",
+          "rule": "mean-sentence-words",
+          "detail": "5.8 not in 8–14"
+        }
+      ]
+    },
+    {
+      "id": "ouvir-batida-4",
+      "beat": 4,
+      "level": "ouvir",
+      "ok": false,
+      "words": 125,
+      "meanSentenceWords": 6.9,
+      "hasRefrain": true,
+      "violations": [
+        {
+          "severity": "fail",
+          "rule": "mean-sentence-words",
+          "detail": "6.9 not in 8–14"
+        }
+      ]
+    },
+    {
+      "id": "ouvir-final",
+      "beat": 5,
+      "level": "ouvir",
+      "ok": true,
+      "words": 124,
+      "meanSentenceWords": 8.9,
+      "hasRefrain": true,
+      "violations": []
+    },
+    {
+      "id": "ler-abertura",
+      "beat": 1,
+      "level": "ler",
+      "ok": true,
+      "words": 240,
+      "meanSentenceWords": 6.9,
+      "hasRefrain": true,
+      "violations": []
+    },
+    {
+      "id": "ler-batida-3",
+      "beat": 3,
+      "level": "ler",
+      "ok": true,
+      "words": 212,
+      "meanSentenceWords": 6.4,
+      "hasRefrain": true,
+      "violations": []
+    },
+    {
+      "id": "ler-final",
+      "beat": 5,
+      "level": "ler",
+      "ok": true,
+      "words": 230,
+      "meanSentenceWords": 7.7,
+      "hasRefrain": true,
+      "violations": []
+    },
+    {
+      "id": "nome-com-acentos",
+      "beat": 1,
+      "level": "ouvir",
+      "ok": false,
+      "words": 115,
+      "meanSentenceWords": 9.6,
+      "hasRefrain": true,
+      "violations": [
+        {
+          "severity": "fail",
+          "rule": "choice-label-words",
+          "detail": "choice 1 has 5 words, allowed 2–4"
+        }
+      ]
+    },
+    {
+      "id": "caminho-profundo",
+      "beat": 4,
+      "level": "ouvir",
+      "ok": false,
+      "words": 115,
+      "meanSentenceWords": 7.7,
+      "hasRefrain": true,
+      "violations": [
+        {
+          "severity": "fail",
+          "rule": "mean-sentence-words",
+          "detail": "7.7 not in 8–14"
+        }
+      ]
+    }
+  ]
+}

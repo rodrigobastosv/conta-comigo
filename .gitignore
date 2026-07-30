@@ -20,3 +20,6 @@ next-env.d.ts
 npm-debug.log*
 coverage/
 .DS_Store
+
+# Evaluation runs: the numbers are pasted into PRs, the raw dumps are noise.
+eval-reports/

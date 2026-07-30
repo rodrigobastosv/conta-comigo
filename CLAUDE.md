@@ -55,7 +55,7 @@ Before "fixing" any of these, read [docs/decisions.md](docs/decisions.md):
   `finished` field.
 - The filename of a story bible mirrors its `id`, which is what goes into
   `stories.bible_id`. That is why `loja-de-coisas-perdidas.ts` keeps a pt-BR name.
-- There is no eslint or prettier. Follow the formatting of neighbouring files.
+- Formatting is prettier's and linting is eslint's: `npm run format`, `npm run lint`. Both run in CI.
 
 ## Invariants that cannot be broken
 
@@ -72,7 +72,7 @@ Before "fixing" any of these, read [docs/decisions.md](docs/decisions.md):
 ## Verify before finishing
 
 ```bash
-npm test && npm run typecheck && npm run build
+npm test && npm run typecheck && npm run lint && npm run format:check && npm run build
 ```
 
 Changed streaming parsing? Add a test in

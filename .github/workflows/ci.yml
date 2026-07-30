@@ -26,6 +26,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Format
+        run: npm run format:check
+
       # Does not need ANTHROPIC_API_KEY: the client is only constructed at runtime.
       - name: Build
         run: npm run build

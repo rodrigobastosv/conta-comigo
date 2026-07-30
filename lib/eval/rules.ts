@@ -78,7 +78,7 @@ function normalise(text: string): string {
     .trim();
 }
 
-export function measure(scene: Scene, refrain: string): Measurements {
+export function measure(scene: Scene, refrain: string | null): Measurements {
   const sentences = splitSentences(scene.text);
   const sentenceWords = sentences.map(countWords);
 
@@ -89,7 +89,15 @@ export function measure(scene: Scene, refrain: string): Measurements {
       ? sentenceWords.reduce((a, b) => a + b, 0) / sentenceWords.length
       : 0,
     longestSentenceWords: Math.max(0, ...sentenceWords),
-    hasRefrain: normalise(scene.text).includes(normalise(refrain)),
+    // In an invented world the refrain is the one this very scene declared. That
+    // is a weaker check than measuring against a refrain written months ago —
+    // the model cannot contradict itself here — but it is the one that matters:
+    // a refrain that is declared and never spoken is a refrain the child never
+    // learns. Beats 2–5 are checked against the world carried in, which is the
+    // strong version of the same check.
+    hasRefrain: refrain
+      ? normalise(scene.text).includes(normalise(refrain))
+      : false,
     choiceLabelWords: scene.choices.map((c) => countWords(c.label)),
   };
 }
@@ -136,11 +144,44 @@ function withoutDialogue(text: string): string {
 
 const NARRATOR_SELF = /\b(eu|meu|minha|comigo|me parece|acho que)\b/i;
 
+/**
+ * The anti-cliché list from the world charter, made measurable.
+ *
+ * It only applies to invented worlds. A hand-written world is allowed a dragon
+ * if a person decided it should have one; a generated world reaching for a
+ * dragon is the model writing by reflex, which is the exact failure the charter
+ * exists to prevent. Kept to nouns that are unambiguous in pt-BR — no "magia",
+ * which a perfectly good scene can use in passing.
+ */
+const CLICHES = [
+  "dragao",
+  "fada",
+  "unicornio",
+  "duende",
+  "bruxa",
+  "elfo",
+  "reino",
+  "castelo",
+  "princesa",
+  "cavaleiro",
+  "varinha",
+  "profecia",
+  "feiticeiro",
+];
+
+export type WorldCheck = {
+  /** Invented worlds are held to the anti-cliché list. Hand-written ones are not. */
+  invented: boolean;
+  /** Whether this scene has to declare the world. Only beat 1 of an invented world. */
+  expected: boolean;
+};
+
 export function check(
   scene: Scene,
   level: ReadingLevel,
-  refrain: string,
+  refrain: string | null,
   isFinalBeat: boolean,
+  world: WorldCheck = { invented: false, expected: false },
 ): { measurements: Measurements; violations: Violation[] } {
   const rules = RULES[level];
   const m = measure(scene, refrain);
@@ -214,6 +255,27 @@ export function check(
   // must not fail a run on its own.
   if (NARRATOR_SELF.test(withoutDialogue(scene.text))) {
     warn("narrator-persona", "first person outside dialogue");
+  }
+
+  // Without a world, beats 2 to 5 have no layer 2 at all and the story drifts
+  // with nothing to catch it. This is the check that makes an invented world
+  // safe to ship.
+  if (world.expected && !scene.world) {
+    fail("world-missing", "beat 1 of an invented world declared no world");
+  }
+  if (!world.expected && scene.world) {
+    fail("world-unexpected", "a world that already exists was rewritten");
+  }
+  if (world.expected && scene.world && !m.hasRefrain) {
+    fail("refrain-declared-not-spoken", "the refrain is declared but not said");
+  }
+
+  if (world.invented) {
+    for (const cliche of CLICHES) {
+      if (new RegExp(`\\b${cliche}s?\\b`).test(flat)) {
+        fail("world-cliche", `contains "${cliche}"`);
+      }
+    }
   }
 
   return { measurements: m, violations };

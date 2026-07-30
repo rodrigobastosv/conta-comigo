@@ -1,25 +1,16 @@
-import type { Beat } from "../types.ts";
+import type { StoryBible } from "../types.ts";
 
 /**
- * The filename mirrors `id`, which is what goes into `stories.bible_id`. Keep it
- * that way: an archived story records the id, and finding the world it was
- * generated in should not require a lookup table. That is also why the id stays
- * in Portuguese while the code around it is English.
+ * A hand-written world. Everything here — the shopkeeper who never solves it for
+ * the child, the dog that barks once at a lie — is a guarantee an invented world
+ * cannot give, and it is what makes a hundred runs feel authored rather than
+ * generic. See docs/story-bible.md, layer 2a.
  */
-export type StoryBible = {
-  id: string;
-  title: string;
-  refrain: string;
-  /** Layer 2: rendered into the system prompt, in full, on every call. */
-  text: string;
-  /** Instruction per beat. Passed into the prompt as a parameter. */
-  beats: Record<Beat, string>;
-};
-
 export const LOST_THINGS_SHOP: StoryBible = {
   id: "loja-de-coisas-perdidas",
   title: "A Loja de Coisas Perdidas",
   refrain: "Toda coisa perdida quer voltar pra casa.",
+  invented: false,
 
   text: `HISTÓRIA: A Loja de Coisas Perdidas
 

@@ -53,6 +53,11 @@ Before "fixing" any of these, read [docs/decisions.md](docs/decisions.md):
   the voice in the same tick.
 - Beat 5 returns `choices: []`. It is the end-of-story signal; there is no
   `finished` field.
+- `world` comes **after** `text` in `sceneSchema` on purpose, so beat 1 of an
+  invented world declares the world only once the prose is out. Anything in front
+  of `text` delays the first token.
+- The seed is an **id**, resolved server-side against `SEEDS` — a child's own
+  prose never reaches the prompt.
 - The filename of a story bible mirrors its `id`, which is what goes into
   `stories.bible_id`. That is why `loja-de-coisas-perdidas.ts` keeps a pt-BR name.
 - Formatting is prettier's and linting is eslint's: `npm run format`, `npm run lint`. Both run in CI.

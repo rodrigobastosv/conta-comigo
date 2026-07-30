@@ -14,11 +14,23 @@ const choice = (label: string) => ({ label, icon: "🗄️" });
 function scene(over: Record<string, unknown> = {}) {
   return {
     text: "A loja apareceu na esquina.",
+    world: null,
     new_facts: ["a loja tem porta verde"],
     choices: [choice("Abrir a gaveta"), choice("Perguntar ao Farelo")],
     ...over,
   };
 }
+
+const world = (over: Record<string, unknown> = {}) => ({
+  title: "O Guarda-Chuva que Não Queria Fechar",
+  refrain: "Quem espera na chuva não espera sozinho.",
+  invariants: [
+    "o guarda-chuva só fecha quando para de chover",
+    "seu Aldo nunca entra antes das seis",
+    "o pardal bate a asa uma vez quando alguém esquece",
+  ],
+  ...over,
+});
 
 describe("validateScene: the choice-count rule", () => {
   for (const beat of [1, 2, 3, 4] as Beat[]) {
@@ -155,6 +167,65 @@ describe("validateScene: the schema", () => {
     // If it throws, nothing downstream should have been handed a half-scene.
     assert.throws(
       () => validateScene({ text: "só isso" }, 1),
+      SceneInvalidError,
+    );
+  });
+});
+
+/**
+ * A world is layer 2 of a run that nobody wrote by hand. Losing it on beat 1
+ * leaves the next four beats with nothing to be coherent against; getting one
+ * later means the model is rewriting a world the child is already inside.
+ */
+describe("validateScene: the world rule", () => {
+  it("accepts a world when beat 1 was asked to invent one", () => {
+    const result = validateScene(scene({ world: world() }), 1, true);
+    assert.equal(result.world?.title, "O Guarda-Chuva que Não Queria Fechar");
+  });
+
+  it("rejects beat 1 of an invented world that returned no world", () => {
+    assert.throws(() => validateScene(scene(), 1, true), SceneInvalidError);
+  });
+
+  it("rejects a world nobody asked for", () => {
+    assert.throws(
+      () => validateScene(scene({ world: world() }), 3),
+      SceneInvalidError,
+    );
+  });
+
+  it("rejects fewer than 3 invariants", () => {
+    assert.throws(
+      () =>
+        validateScene(
+          scene({ world: world({ invariants: ["só uma regra"] }) }),
+          1,
+          true,
+        ),
+      SceneInvalidError,
+    );
+  });
+
+  it("rejects more than 5 invariants", () => {
+    const six = Array.from({ length: 6 }, (_, i) => `regra ${i}`);
+    assert.throws(
+      () =>
+        validateScene(scene({ world: world({ invariants: six }) }), 1, true),
+      SceneInvalidError,
+    );
+  });
+
+  it("rejects a world with no refrain", () => {
+    assert.throws(
+      () => validateScene(scene({ world: world({ refrain: "" }) }), 1, true),
+      SceneInvalidError,
+    );
+  });
+
+  it("rejects an unknown field inside the world", () => {
+    assert.throws(
+      () =>
+        validateScene(scene({ world: world({ mood: "chuvoso" }) }), 1, true),
       SceneInvalidError,
     );
   });

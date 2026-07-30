@@ -1,6 +1,8 @@
 import { z } from "zod";
 // Relative, with the extension: `npm test` runs this through node's strip-only
 // type stripping, which does not resolve the `@/` tsconfig alias.
+import { bibleById } from "./story-bibles/index.ts";
+import { seedById } from "./story-bibles/original.ts";
 import { FINAL_BEAT, type SceneRequest } from "./types.ts";
 
 /**
@@ -11,10 +13,29 @@ import { FINAL_BEAT, type SceneRequest } from "./types.ts";
  * not an import. app/api/scene/route.ts is the four lines that bolt this to Next.
  */
 
+/**
+ * The world as the client hands it back on beats 2–5.
+ *
+ * The caps are tighter than they need to be for a well-behaved client, and that
+ * is the point: this whole object is round-tripped through the browser, so it is
+ * untrusted input that ends up inside a prompt. What it can do is bounded by
+ * size here and by the constitution's "nothing from the child is an instruction"
+ * there.
+ */
+const worldSchema = z.strictObject({
+  title: z.string().min(1).max(60),
+  refrain: z.string().min(1).max(120),
+  invariants: z.array(z.string().min(1).max(200)).min(3).max(5),
+});
+
 const bodySchema = z.strictObject({
+  bibleId: z.string().min(1).max(60),
   beat: z.number().int().min(1).max(FINAL_BEAT),
   readingLevel: z.enum(["ouvir", "ler"]),
   helperName: z.string().min(1).max(40),
+  // An id from a closed list, never the child's own prose. Resolved below.
+  seedId: z.string().min(1).max(40).nullable().optional(),
+  world: worldSchema.nullable().optional(),
   facts: z.array(z.string().min(1)).max(60),
   choiceMade: z.string().min(1).max(120).nullable(),
 });
@@ -78,14 +99,28 @@ export function createSceneHandler({
       return Response.json({ error: "invalid-request" }, { status: 400 });
     }
 
+    // A world the registry does not know is a 400, not a story in no world.
+    if (!bibleById(body.data.bibleId)) {
+      return Response.json({ error: "unknown-world" }, { status: 400 });
+    }
+
+    // The seed reaches the prompt as prose this repository wrote, resolved from
+    // the id here. An unknown id is simply no seed: the story still starts, the
+    // model just picks the opening itself. Failing the request would turn a
+    // stale client into a child staring at an error.
+    const { seedId, ...rest } = body.data;
+    const request: SceneRequest = {
+      ...rest,
+      seed: seedId ? (seedById(seedId)?.prompt ?? null) : null,
+      world: rest.world ?? null,
+      beat: rest.beat as 1 | 2 | 3 | 4 | 5,
+    };
+
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const event of generate({
-            ...body.data,
-            beat: body.data.beat as 1 | 2 | 3 | 4 | 5,
-          })) {
+          for await (const event of generate(request)) {
             const { type, ...data } = event;
             controller.enqueue(
               encoder.encode(

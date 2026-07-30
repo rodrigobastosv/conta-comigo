@@ -46,16 +46,27 @@ exactly the latency streaming exists to win.
 | `Sentences` | Accumulates text and returns each complete sentence exactly once. End of sentence = final punctuation followed by a space. `drain()` at the end picks up the last one, which has no space after it. |
 
 This is why **`text` is the first field** of `sceneSchema` in
-[lib/schema.ts](../lib/schema.ts): the reader needs it to arrive before
-`new_facts` and `choices`.
+[lib/schema.ts](../lib/schema.ts): the reader needs it to arrive before `world`,
+`new_facts` and `choices`. It is also why an invented world is declared *after*
+the prose rather than before it — a world block in front of the text would push
+the first token back by its own length, and nothing delays the first token.
 
 ## The three layers of the story bible
 
 | Layer | Scope | Where it lives | In the prompt |
 | --- | --- | --- | --- |
 | 1. Constitution | Every story, forever | [lib/prompts/v1.ts](../lib/prompts/v1.ts) | `system`, in full, **cached** |
-| 2. Story bible | One world | [lib/story-bibles/](../lib/story-bibles/) | `system`, in full, **cached** |
+| 2. World | One world | [lib/story-bibles/](../lib/story-bibles/) | `system`, in full, **cached** |
+| 2. World, when invented | One run | `stories.world`, written by beat 1 | user message, outside the cache |
 | 3. Established facts | One path in the graph | `scenes.new_facts` column | user message, accumulated, outside the cache |
+
+Layer 2 comes in two forms and nothing below it can tell them apart. A **fixed
+world** is a file someone wrote; an **invented world** is written by the model on
+beat 1 and returned in `scene.world`. What sits in the cached `system` for an
+invented run is the *charter* — the shape a world must have, identical for every
+child — while the world itself is volatile and rides in the user message with the
+facts. [lib/story-bibles/index.ts](../lib/story-bibles/index.ts) is the registry;
+`bible.invented` is the fork, and the generator reads it once.
 
 Layer 3 is what stops the dragon that was blue in scene 2 from being green in
 scene 4. Every scene returns, in `new_facts`, the facts it made true; the whole
@@ -113,6 +124,8 @@ end is inspectable by any 8-year-old with a curious finger.
 | --- | --- |
 | [app/api/scene/route.ts](../app/api/scene/route.ts) | Ceiling of 60 generations per hour, per `x-forwarded-for`, in a `Map` in the process memory. |
 | [app/api/scene/route.ts](../app/api/scene/route.ts) | `z.strictObject` on the body: an extra field is a 400, not an ignored field. |
+| [lib/scene-route.ts](../lib/scene-route.ts) | The seed is an id from a closed list, resolved server-side: a child's own prose never reaches the prompt. An unknown `bible_id` is a 400. |
+| [lib/scene-route.ts](../lib/scene-route.ts) | The world round-trips through the browser, so it is re-validated on the way back in — same caps as the output schema. |
 | [lib/schema.ts](../lib/schema.ts) | `validateScene` checks the schema **and** the choice-count rule per beat. |
 | [lib/generate-scene.ts](../lib/generate-scene.ts) | `stop_reason` `refusal` and `max_tokens` become explicit errors, not a half-baked scene. |
 | [lib/generate-scene.ts](../lib/generate-scene.ts) | Error detail only in the server log; the client gets a code (`generation-failed`). |
@@ -141,6 +154,8 @@ In [lib/anthropic.ts](../lib/anthropic.ts):
 | [docs/story-bible.md](story-bible.md) | Source of truth, in prose, in pt-BR. **Change here first**, code after. |
 | [lib/prompts/v1.ts](../lib/prompts/v1.ts) | Layer 1 + reading-level rules + `buildRequest`. Versioned. |
 | [lib/story-bibles/](../lib/story-bibles/) | Layer 2: one file per world, named after its `bible_id`. |
+| [lib/story-bibles/index.ts](../lib/story-bibles/index.ts) | The registry. Adding a world is adding a file and an entry — the generator never imports one directly. |
+| [lib/story-bibles/original.ts](../lib/story-bibles/original.ts) | The world charter and the seed list: layer 2 for a story nobody wrote. |
 | [lib/schema.ts](../lib/schema.ts) | Output contract (Zod) + the rule the schema cannot express. |
 | [lib/types.ts](../lib/types.ts) | `Beat`, `Scene`, `SceneRequest`, `ReadingLevel`. |
 | [lib/stream-json.ts](../lib/stream-json.ts) | Extracts the text from the partial JSON and splits it into sentences. |

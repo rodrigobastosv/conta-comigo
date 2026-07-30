@@ -24,8 +24,13 @@ create table profiles (
 create table stories (
   id          uuid primary key default gen_random_uuid(),
   profile_id  uuid not null references profiles (id) on delete cascade,
-  -- Which bible (world) was used: 'loja-de-coisas-perdidas'.
+  -- Which bible (world) was used: 'loja-de-coisas-perdidas' or 'original'.
   bible_id    text not null,
+  -- Layer 2 of a story whose world nobody wrote by hand: the title, refrain and
+  -- invariants beat 1 invented. Null for a fixed world, whose layer 2 is in the
+  -- repository. It lives on the story and not on the scene because every branch
+  -- of the story shares one world — see docs/story-bible.md, layer 2b.
+  world       jsonb,
   title       text not null,
   -- The name the child gave the helper. Asked once per story and a fiction
   -- nickname, not an identity — but it lives here because coherence between

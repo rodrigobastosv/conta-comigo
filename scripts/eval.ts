@@ -1,6 +1,6 @@
 /**
- * Runs the ten fixed openings against the real model and measures the numeric
- * reading-level rules.
+ * Runs the fixed openings against the real model and measures the numeric
+ * reading-level rules, in both worlds.
  *
  *   npm run eval
  *
@@ -22,7 +22,7 @@ import { check, type Violation } from "../lib/eval/rules.ts";
 import { generateScene } from "../lib/generate-scene.ts";
 import { PROMPT_VERSION } from "../lib/prompts/v1.ts";
 import { EFFORT, MODEL } from "../lib/anthropic.ts";
-import { LOST_THINGS_SHOP } from "../lib/story-bibles/loja-de-coisas-perdidas.ts";
+import { bibleById } from "../lib/story-bibles/index.ts";
 import { FINAL_BEAT, type Scene } from "../lib/types.ts";
 
 if (!process.env.ANTHROPIC_API_KEY) {
@@ -36,6 +36,7 @@ const REPORT_DIR = "eval-reports";
 
 type Result = {
   id: string;
+  bibleId: string;
   beat: number;
   level: string;
   ok: boolean;
@@ -46,6 +47,8 @@ type Result = {
   hasRefrain: boolean;
   violations: Violation[];
   text: string;
+  /** The world this run invented, when it invented one. Null everywhere else. */
+  world: Scene["world"];
 };
 
 /** Collects a whole scene from the generator, which is what the route streams. */
@@ -81,6 +84,7 @@ for (const testCase of CASES) {
   if (!scene) {
     results.push({
       id: testCase.id,
+      bibleId: testCase.request.bibleId,
       beat: testCase.request.beat,
       level: testCase.request.readingLevel,
       ok: false,
@@ -93,16 +97,30 @@ for (const testCase of CASES) {
         { severity: "fail", rule: "generation", detail: error ?? "unknown" },
       ],
       text: "",
+      world: null,
     });
-    console.log(`FAIL  ${testCase.id.padEnd(20)} could not generate: ${error}`);
+    console.log(`FAIL  ${testCase.id.padEnd(30)} could not generate: ${error}`);
     continue;
   }
+
+  // Where the refrain comes from says which world this is. A fixed world has it
+  // in the file; an invented one either carried it in from beat 1 (the strong
+  // check) or has just written it in this very scene (the weak one).
+  const bible = bibleById(testCase.request.bibleId);
+  const invented = bible?.invented === true;
+  const expectsWorld = invented && testCase.request.beat === 1;
+  const refrain =
+    bible?.refrain ??
+    testCase.request.world?.refrain ??
+    scene.world?.refrain ??
+    null;
 
   const { measurements, violations } = check(
     scene,
     testCase.request.readingLevel,
-    LOST_THINGS_SHOP.refrain,
+    refrain,
     testCase.request.beat === FINAL_BEAT,
+    { invented, expected: expectsWorld },
   );
 
   const failures = violations.filter((v) => v.severity === "fail");
@@ -110,6 +128,7 @@ for (const testCase of CASES) {
 
   results.push({
     id: testCase.id,
+    bibleId: testCase.request.bibleId,
     beat: testCase.request.beat,
     level: testCase.request.readingLevel,
     ok,
@@ -120,12 +139,13 @@ for (const testCase of CASES) {
     hasRefrain: measurements.hasRefrain,
     violations,
     text: scene.text,
+    world: scene.world,
   });
 
   console.log(
     [
       ok ? "pass" : "FAIL",
-      testCase.id.padEnd(20),
+      testCase.id.padEnd(30),
       `${String(measurements.words).padStart(3)}w`,
       `${measurements.meanSentenceWords.toFixed(1).padStart(4)}w/frase`,
       measurements.hasRefrain ? "refrão" : "      ",

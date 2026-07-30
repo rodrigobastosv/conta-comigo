@@ -17,6 +17,7 @@ function sceneOf(words: number, extra: Partial<Scene> = {}): Scene {
   }
   return {
     text: sentences.join(" "),
+    world: null,
     new_facts: [],
     choices: [
       { label: "Abrir a gaveta", icon: "🗄️" },
@@ -25,6 +26,14 @@ function sceneOf(words: number, extra: Partial<Scene> = {}): Scene {
     ...extra,
   };
 }
+
+const INVENTED = { invented: true, expected: true };
+
+const WORLD = {
+  title: "O Guarda-Chuva que Não Queria Fechar",
+  refrain: "Quem espera na chuva não espera sozinho.",
+  invariants: ["o guarda-chuva só fecha quando para de chover"],
+};
 
 describe("measuring", () => {
   it("counts words", () => {
@@ -178,11 +187,73 @@ describe("the constitution checks", () => {
   });
 });
 
-describe("the fixed cases", () => {
-  it("has ten of them", () => {
-    assert.equal(CASES.length, 10);
+describe("the invented-world rules", () => {
+  const openWorld = (scene: Scene) =>
+    check(scene, "ouvir", WORLD.refrain, false, INVENTED);
+
+  it("fails beat 1 that invents no world", () => {
+    const { violations } = openWorld(
+      sceneOf(100, { text: `${sceneOf(90).text} ${WORLD.refrain}` }),
+    );
+    assert.ok(violations.some((v) => v.rule === "world-missing"));
   });
 
+  // Beats 2 to 5 already have a world. One coming back means the model is
+  // rewriting it mid-story, and the child's world changes under her.
+  it("fails a later beat that returns a world anyway", () => {
+    const { violations } = check(
+      sceneOf(100, { world: WORLD }),
+      "ouvir",
+      WORLD.refrain,
+      false,
+      { invented: true, expected: false },
+    );
+    assert.ok(violations.some((v) => v.rule === "world-unexpected"));
+  });
+
+  // A refrain the child never hears is not a refrain. The declaration is free;
+  // saying it in the scene is the part that costs the model something.
+  it("fails a refrain that is declared but never spoken", () => {
+    const { violations } = openWorld(sceneOf(100, { world: WORLD }));
+    assert.ok(violations.some((v) => v.rule === "refrain-declared-not-spoken"));
+  });
+
+  it("passes an opening that declares its world and speaks its refrain", () => {
+    const scene = sceneOf(100, {
+      text: `${sceneOf(90).text} ${WORLD.refrain}`,
+      world: WORLD,
+    });
+    assert.deepEqual(
+      openWorld(scene).violations.filter((v) => v.severity === "fail"),
+      [],
+    );
+  });
+
+  it("fails the clichés the charter bans", () => {
+    for (const word of ["dragão", "princesa", "castelo", "fada"]) {
+      const scene = sceneOf(100, {
+        text: `Havia um ${word} na esquina. ${WORLD.refrain}`,
+        world: WORLD,
+      });
+      assert.ok(
+        openWorld(scene).violations.some((v) => v.rule === "world-cliche"),
+        `${word} should fail`,
+      );
+    }
+  });
+
+  // A hand-written world is allowed anything a person decided it should have.
+  // The list exists to catch a model writing by reflex, not to ban a noun.
+  it("does not apply the cliché list to a hand-written world", () => {
+    const scene = sceneOf(100, {
+      text: `Havia um castelo na gaveta. ${REFRAIN}`,
+    });
+    const { violations } = check(scene, "ouvir", REFRAIN, false);
+    assert.ok(!violations.some((v) => v.rule === "world-cliche"));
+  });
+});
+
+describe("the fixed cases", () => {
   it("gives every case a unique id and a reason for existing", () => {
     const ids = CASES.map((c) => c.id);
     assert.equal(new Set(ids).size, ids.length);
@@ -196,5 +267,15 @@ describe("the fixed cases", () => {
     assert.ok(CASES.some((c) => c.request.beat === 5));
     assert.ok(CASES.some((c) => c.request.facts.length === 0));
     assert.ok(CASES.some((c) => c.request.facts.length >= 10));
+  });
+
+  // Both worlds, or the run only proves the half that did not change.
+  it("covers both worlds, with and without a seed", () => {
+    assert.ok(
+      CASES.some((c) => c.request.bibleId === "loja-de-coisas-perdidas"),
+    );
+    assert.ok(CASES.some((c) => c.request.bibleId === "original"));
+    assert.ok(CASES.some((c) => c.request.seed));
+    assert.ok(CASES.some((c) => c.request.world));
   });
 });

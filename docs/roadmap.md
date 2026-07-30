@@ -59,7 +59,9 @@ does not write to it. Today the path lives in `useState` and reloading the page
 loses everything.
 
 Missing: storing the scene and reading the path back, and using `scene_path()` to
-assemble the facts instead of accumulating them in the client. Respecting
+assemble the facts instead of accumulating them in the client. An invented world
+also has to land in `stories.world`, or a re-read comes back in no world at all —
+today it lives in `useState` next to the path and dies with the tab. Respecting
 `scenes_parent_choice`: if the scene for that (parent, choice) pair already
 exists, reuse it instead of regenerating.
 
@@ -97,20 +99,34 @@ Missing: acting on what it found. `v2` scores 4/10 — the `ouvir` sentence floo
 of 8 words is not what the model produces and probably not what a five-year-old
 wants. That is a prose change, so it starts in
 [story-bible.md](story-bible.md). See
-[decisions.md](decisions.md#what-the-first-run-found).
+[decisions.md](decisions.md#what-the-first-run-found). **It is still open under
+v3**: the invented world did not touch the reading-level rules, so the same floor
+is still pulling against "uma ideia por frase".
+
+`v3` added four cases (both invented openings, a mid beat and an ending) and the
+checks that only an invented world can fail: a world that is never declared, a
+refrain declared but never spoken, and the anti-cliché list. **The v2 baseline is
+not comparable to a v3 run** — the prompt changed for both worlds and the case
+count went from 10 to 14. Re-measure before drawing a conclusion.
 
 Still open: whether `EFFORT` should go from `low` to `medium`. Nothing in the
 first run suggests it — no case needed a second attempt.
 
 ## More worlds
 
-There is only one bible: [the lost things
-shop](../lib/story-bibles/loja-de-coisas-perdidas.ts). Layer 2 is already one file
-per world and `stories.bible_id` already records which one was used — but
-[lib/generate-scene.ts](../lib/generate-scene.ts) still imports that bible
-directly, so adding a world is adding a file **and** editing the generator. A
-registry, the UI to choose, and the validation that every bible has all five beats
-are missing.
+Done: [lib/story-bibles/index.ts](../lib/story-bibles/index.ts) is the registry,
+the generator resolves the bible from `request.bibleId` instead of importing one,
+the start screen lets the family choose, and `Record<Beat, string>` makes "every
+bible has all five beats" a compile error rather than a runtime surprise.
+
+Two worlds ship: [the lost things
+shop](../lib/story-bibles/loja-de-coisas-perdidas.ts), written by hand, and
+[original](../lib/story-bibles/original.ts), where the model invents the world on
+beat 1 from a charter. Adding a third is adding a file and an entry.
+
+Missing: a second **hand-written** world. The charter buys variety, not the kind
+of specificity Dona Vitória has, and the roadmap item that mattered here was
+always "a world someone loved writing".
 
 ## Illustrations
 

@@ -5,6 +5,8 @@ import { unlockAudio } from "@/lib/audio";
 import { readSSE } from "@/lib/sse";
 import { sentenceRange } from "@/lib/tts/highlight";
 import { PlaybackQueue } from "@/lib/tts/queue";
+import { BIBLES, DEFAULT_BIBLE_ID, bibleById } from "@/lib/story-bibles";
+import { SEEDS } from "@/lib/story-bibles/original";
 import { deviceSpeaker, deviceSpeechAvailable } from "@/lib/tts/speaker";
 import { defaultVoice } from "@/lib/tts/voices";
 import {
@@ -12,6 +14,7 @@ import {
   type Beat,
   type Scene,
   type ReadingLevel,
+  type World,
 } from "@/lib/types";
 
 /** A node of the path travelled. In memory today; becomes the `scenes` table later. */
@@ -23,10 +26,18 @@ type PathNode = {
 
 type Phase = "start" | "generating" | "reading" | "end";
 
-export function Story({ title }: { title: string }) {
+export function Story() {
   const [phase, setPhase] = useState<Phase>("start");
   const [name, setName] = useState("");
   const [level, setLevel] = useState<ReadingLevel>("ouvir");
+  const [bibleId, setBibleId] = useState(DEFAULT_BIBLE_ID);
+  const [seedId, setSeedId] = useState<string | null>(null);
+  /**
+   * The world beat 1 invented, kept for the rest of the run. It is layer 2 of
+   * this story: it goes back up on every later beat, alongside the facts, and
+   * losing it would leave beats 2–5 with no world at all.
+   */
+  const [world, setWorld] = useState<World | null>(null);
   const [path, setPath] = useState<PathNode[]>([]);
   const [partial, setPartial] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +88,14 @@ export function Story({ title }: { title: string }) {
   useEffect(() => silence, [silence]);
 
   const generate = useCallback(
-    async (beat: Beat, choiceMade: string | null, base: PathNode[]) => {
+    async (
+      beat: Beat,
+      choiceMade: string | null,
+      base: PathNode[],
+      // Passed in rather than read from state on beat 1: `begin` clears the world
+      // of the previous run, and the clear has not landed yet when it calls this.
+      knownWorld: World | null,
+    ) => {
       if (inFlight.current) return;
       inFlight.current = true;
       setError(null);
@@ -94,16 +112,19 @@ export function Story({ title }: { title: string }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            bibleId,
             beat,
             readingLevel: level,
             helperName: name.trim() || "Ajudante",
+            seedId: beat === 1 ? seedId : null,
+            world: knownWorld,
             facts: base.flatMap((node) => node.scene.new_facts),
             choiceMade,
           }),
         });
 
         if (!response.ok) {
-          setError("A loja não apareceu. Tente de novo.");
+          setError("A história não começou. Tente de novo.");
           setPhase(base.length ? "reading" : "start");
           return;
         }
@@ -121,6 +142,9 @@ export function Story({ title }: { title: string }) {
             if (wantsNarration.current) queue.current?.push(index, text);
           } else if (event === "scene") {
             const scene = (data as { scene: Scene }).scene;
+            // Only beat 1 of an invented world carries one, and it has to
+            // survive every later beat of this run.
+            if (scene.world) setWorld(scene.world);
             setPath([...base, { beat, scene, entryChoice: choiceMade }]);
             setPartial("");
             setPhase(beat === FINAL_BEAT ? "end" : "reading");
@@ -130,13 +154,13 @@ export function Story({ title }: { title: string }) {
           }
         }
       } catch {
-        setError("Sem conexão com a loja.");
+        setError("Sem conexão.");
         setPhase(base.length ? "reading" : "start");
       } finally {
         inFlight.current = false;
       }
     },
-    [level, name, silence, startQueue],
+    [bibleId, level, name, seedId, silence, startQueue],
   );
 
   function begin() {
@@ -145,12 +169,13 @@ export function Story({ title }: { title: string }) {
     // product; in `ler` mode it is an offer.
     setNarration(level === "ouvir" && deviceSpeechAvailable());
     setPath([]);
-    void generate(1, null, []);
+    setWorld(null);
+    void generate(1, null, [], null);
   }
 
   function choose(label: string) {
     const next = ((current?.beat ?? 0) + 1) as Beat;
-    void generate(next, label, path);
+    void generate(next, label, path, world);
   }
 
   /**
@@ -164,6 +189,9 @@ export function Story({ title }: { title: string }) {
     setPartial("");
     setSentences([]);
     setPhase(base.length ? "reading" : "start");
+    // Backing out past beat 1 leaves no scene that world belongs to, and the
+    // start screen would otherwise still be titled with the story just left.
+    if (base.length === 0) setWorld(null);
   }
 
   /** Turning it on mid-scene reads from the top: "me lê essa parte de novo". */
@@ -193,6 +221,14 @@ export function Story({ title }: { title: string }) {
   const textOnScreen = partial || current?.scene.text || "";
   const speech = deviceSpeechAvailable();
 
+  const bible = bibleById(bibleId);
+  /**
+   * An invented world ships a promise as its title ("uma história nova") and
+   * beat 1 replaces it with the real one. Watching the title arrive is the
+   * moment the child sees the story became hers.
+   */
+  const headerTitle = world?.title ?? bible?.title ?? "";
+
   // Highlight only while a sentence is actually being read.
   const range =
     narrating && spoken !== null
@@ -205,7 +241,7 @@ export function Story({ title }: { title: string }) {
         <p className="text-xs uppercase tracking-[0.2em] text-shop/70">
           Conta Comigo
         </p>
-        <h1 className="mt-1 text-2xl font-normal">{title}</h1>
+        <h1 className="mt-1 text-2xl font-normal">{headerTitle}</h1>
       </header>
 
       {phase === "start" && (
@@ -222,6 +258,73 @@ export function Story({ title }: { title: string }) {
               className="rounded-xl border-2 border-ink/15 bg-white/60 px-4 py-3 text-xl outline-none focus:border-shop"
             />
           </label>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-lg">Qual história?</legend>
+            {BIBLES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setBibleId(option.id)}
+                className={`rounded-xl border-2 px-4 py-3 text-left text-lg transition ${
+                  bibleId === option.id
+                    ? "border-shop bg-shop/10"
+                    : "border-ink/15 bg-white/40"
+                }`}
+              >
+                {option.title}
+                {option.invented && (
+                  <span className="block text-sm text-shop/70">
+                    ninguém leu essa ainda
+                  </span>
+                )}
+              </button>
+            ))}
+          </fieldset>
+
+          {/* The seed is only the first sentence — the choices are what grow the
+              story. That is why it is one tap from a closed list and not a
+              question a five-year-old has to answer in writing. */}
+          {bible?.invented && (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-2 text-lg">De onde a gente começa?</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {SEEDS.map((seed) => (
+                  <button
+                    key={seed.id}
+                    type="button"
+                    onClick={() =>
+                      setSeedId(seedId === seed.id ? null : seed.id)
+                    }
+                    className={`flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-4 text-center text-base transition ${
+                      seedId === seed.id
+                        ? "border-shop bg-shop/10"
+                        : "border-ink/15 bg-white/40"
+                    }`}
+                  >
+                    <span aria-hidden className="text-3xl">
+                      {seed.icon}
+                    </span>
+                    <span>{seed.label}</span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSeedId(null)}
+                  className={`flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-4 text-center text-base transition ${
+                    seedId === null
+                      ? "border-shop bg-shop/10"
+                      : "border-ink/15 bg-white/40"
+                  }`}
+                >
+                  <span aria-hidden className="text-3xl">
+                    🎲
+                  </span>
+                  <span>Me surpreenda</span>
+                </button>
+              </div>
+            </fieldset>
+          )}
 
           <fieldset className="flex gap-3">
             {(["ouvir", "ler"] as const).map((option) => (
@@ -341,7 +444,7 @@ export function Story({ title }: { title: string }) {
                 onClick={begin}
                 className="rounded-2xl bg-shop px-5 py-4 text-xl text-paper"
               >
-                Outra coisa perdida
+                {bible?.invented ? "Outra história" : "Outra coisa perdida"}
               </button>
             </div>
           )}

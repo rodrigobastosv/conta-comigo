@@ -146,7 +146,10 @@ In [lib/anthropic.ts](../lib/anthropic.ts):
 | [lib/stream-json.ts](../lib/stream-json.ts) | Extracts the text from the partial JSON and splits it into sentences. |
 | [lib/generate-scene.ts](../lib/generate-scene.ts) | The call to the model, with cache and streaming. |
 | [lib/sse.ts](../lib/sse.ts) | The client's SSE reader. |
-| [lib/audio.ts](../lib/audio.ts) | `AudioContext` unlock on iOS. No narration yet. |
+| [lib/audio.ts](../lib/audio.ts) | iOS unlock for both `speechSynthesis` and the `AudioContext`, on the one user gesture. |
+| [lib/tts/voices.ts](../lib/tts/voices.ts) | The voice catalogue: a voice is a character, and its id outlives any provider. |
+| [lib/tts/queue.ts](../lib/tts/queue.ts) | Speaks sentences in order as they arrive, and goes silent on demand. |
+| [lib/tts/speaker.ts](../lib/tts/speaker.ts) | The device voice, over `speechSynthesis`. |
 | [app/api/scene/route.ts](../app/api/scene/route.ts) | SSE route + generation ceiling. |
 | [components/story.tsx](../components/story.tsx) | All the UI and the path state. |
 | [supabase/schema.sql](../supabase/schema.sql) | The scene graph, with RLS. |

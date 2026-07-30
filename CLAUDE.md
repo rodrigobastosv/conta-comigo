@@ -41,10 +41,16 @@ Before "fixing" any of these, read [docs/decisions.md](docs/decisions.md):
 
 - `text` is the first field of `sceneSchema` **on purpose** — the streaming reader
   extracts that field from the partial JSON.
-- The `sentence` event handler in [components/story.tsx](components/story.tsx) is
-  an empty block **on purpose** — it is the TTS hook, which does not exist yet.
 - [lib/audio.ts](lib/audio.ts) creates an `AudioContext` nobody consumes **on
-  purpose** — the iOS unlock has to happen inside a user gesture.
+  purpose**, and speaks an empty utterance at zero volume — the iOS unlock has to
+  happen inside a user gesture, and `speechSynthesis` and `AudioContext` ask for
+  that permission separately.
+- [lib/tts/speaker.ts](lib/tts/speaker.ts) skips the first pt-BR voice the device
+  offers **on purpose** — on macOS that is a novelty voice, not Luciana.
+- [lib/tts/queue.ts](lib/tts/queue.ts) serialises playback instead of handing
+  every sentence to the platform queue **on purpose** — it is what keeps a
+  sentence from jumping ahead of its predecessor, and what makes a tap silence
+  the voice in the same tick.
 - Beat 5 returns `choices: []`. It is the end-of-story signal; there is no
   `finished` field.
 - The filename of a story bible mirrors its `id`, which is what goes into

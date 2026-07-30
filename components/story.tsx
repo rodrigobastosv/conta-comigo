@@ -1,8 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { unlockAudio } from "@/lib/audio";
 import { readSSE } from "@/lib/sse";
+import { sentenceRange } from "@/lib/tts/highlight";
+import { PlaybackQueue } from "@/lib/tts/queue";
+import { deviceSpeaker, deviceSpeechAvailable } from "@/lib/tts/speaker";
+import { defaultVoice } from "@/lib/tts/voices";
 import { FINAL_BEAT, type Beat, type Scene, type ReadingLevel } from "@/lib/types";
 
 /** A node of the path travelled. In memory today; becomes the `scenes` table later. */
@@ -23,7 +27,52 @@ export function Story({ title }: { title: string }) {
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
+  const [narrating, setNarrating] = useState(false);
+  const [paused, setPaused] = useState(false);
+  /** Index of the sentence being read aloud, for the highlight. */
+  const [spoken, setSpoken] = useState<number | null>(null);
+  /** Sentences of the current scene, in order, as the server closes them. */
+  const [sentences, setSentences] = useState<string[]>([]);
+
+  const queue = useRef<PlaybackQueue | null>(null);
+  /**
+   * Whether the child wants to be read to — the same value as `narrating`, kept
+   * in a ref because the SSE loop below runs for the whole scene and would
+   * otherwise be deciding with whatever the state was when it started.
+   *
+   * Intent and playback are separate on purpose: stopping the voice must not
+   * turn narration off, or every choice would silently switch it off for good.
+   */
+  const wantsNarration = useRef(false);
+
   const current = path[path.length - 1] ?? null;
+
+  /** Stop the voice now. Says nothing about whether narration stays on. */
+  const silence = useCallback(() => {
+    queue.current?.stop();
+    queue.current = null;
+    setSpoken(null);
+    setPaused(false);
+  }, []);
+
+  /** A queue is single-use: every scene gets a fresh one, so nothing leaks across. */
+  const startQueue = useCallback(() => {
+    queue.current?.stop();
+    queue.current = new PlaybackQueue(deviceSpeaker(defaultVoice()), setSpoken);
+    setPaused(false);
+    return queue.current;
+  }, []);
+
+  const setNarration = useCallback(
+    (on: boolean) => {
+      wantsNarration.current = on;
+      setNarrating(on);
+    },
+    [],
+  );
+
+  // Leaving the page mid-sentence must not keep talking.
+  useEffect(() => silence, [silence]);
 
   const generate = useCallback(
     async (beat: Beat, choiceMade: string | null, base: PathNode[]) => {
@@ -31,7 +80,12 @@ export function Story({ title }: { title: string }) {
       inFlight.current = true;
       setError(null);
       setPartial("");
+      setSentences([]);
       setPhase("generating");
+
+      // Whatever was being read belongs to the scene we are leaving.
+      silence();
+      if (wantsNarration.current) startQueue();
 
       try {
         const response = await fetch("/api/scene", {
@@ -57,8 +111,12 @@ export function Story({ title }: { title: string }) {
             setPartial((t) => t + (data as { delta: string }).delta);
             setPhase("reading");
           } else if (event === "sentence") {
-            // Narration hook: the per-sentence TTS goes here, in an audio queue.
-            // Not implemented yet — the scene is already split into sentences for it.
+            // The narration hook. The sentence is spoken while the rest of the
+            // scene is still being generated — that is the whole design, and it
+            // is why the server emits per sentence instead of per scene.
+            const { index, text } = data as { index: number; text: string };
+            setSentences((s) => [...s, text]);
+            if (wantsNarration.current) queue.current?.push(index, text);
           } else if (event === "scene") {
             const scene = (data as { scene: Scene }).scene;
             setPath([...base, { beat, scene, entryChoice: choiceMade }]);
@@ -76,11 +134,14 @@ export function Story({ title }: { title: string }) {
         inFlight.current = false;
       }
     },
-    [level, name],
+    [level, name, silence, startQueue],
   );
 
   function begin() {
     unlockAudio();
+    // In `ouvir` mode the child is not reading the screen, so narration is the
+    // product; in `ler` mode it is an offer.
+    setNarration(level === "ouvir" && deviceSpeechAvailable());
     setPath([]);
     void generate(1, null, []);
   }
@@ -95,14 +156,46 @@ export function Story({ title }: { title: string }) {
    * Nothing is overwritten — the parent stays there, it just gains another child.
    */
   function goBackOne() {
+    silence();
     const base = path.slice(0, -1);
     setPath(base);
     setPartial("");
+    setSentences([]);
     setPhase(base.length ? "reading" : "start");
+  }
+
+  /** Turning it on mid-scene reads from the top: "me lê essa parte de novo". */
+  function toggleNarration() {
+    if (narrating) {
+      setNarration(false);
+      silence();
+      return;
+    }
+
+    setNarration(true);
+    const fresh = startQueue();
+    sentences.forEach((text, index) => fresh.push(index, text));
+  }
+
+  function togglePause() {
+    if (paused) {
+      queue.current?.resume();
+      setPaused(false);
+    } else {
+      queue.current?.pause();
+      setPaused(true);
+    }
   }
 
   const generating = phase === "generating";
   const textOnScreen = partial || current?.scene.text || "";
+  const speech = deviceSpeechAvailable();
+
+  // Highlight only while a sentence is actually being read.
+  const range =
+    narrating && spoken !== null
+      ? sentenceRange(textOnScreen, sentences, spoken)
+      : null;
 
   return (
     <>
@@ -161,9 +254,55 @@ export function Story({ title }: { title: string }) {
       {(phase === "generating" || phase === "reading" || phase === "end") && (
         <section className="flex flex-1 flex-col gap-8">
           <p className="whitespace-pre-wrap text-xl leading-relaxed md:text-2xl">
-            {textOnScreen}
+            {range ? (
+              <>
+                {textOnScreen.slice(0, range[0])}
+                <mark className="rounded bg-farelo/40 text-ink">
+                  {textOnScreen.slice(range[0], range[1])}
+                </mark>
+                {textOnScreen.slice(range[1])}
+              </>
+            ) : (
+              textOnScreen
+            )}
             {generating && <span className="animate-pulse text-shop">▌</span>}
           </p>
+
+          {speech && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={toggleNarration}
+                aria-pressed={narrating}
+                className={`rounded-xl border-2 px-4 py-3 text-base ${
+                  narrating
+                    ? "border-shop bg-shop/10"
+                    : "border-ink/15 bg-white/40"
+                }`}
+              >
+                {narrating ? "🔊 Lendo pra você" : "🔈 Ler pra mim"}
+              </button>
+
+              {narrating && (
+                <>
+                  <button
+                    type="button"
+                    onClick={togglePause}
+                    className="rounded-xl border-2 border-ink/15 bg-white/40 px-4 py-3 text-base"
+                  >
+                    {paused ? "▶︎ Continuar" : "⏸ Pausar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => queue.current?.replay()}
+                    className="rounded-xl border-2 border-ink/15 bg-white/40 px-4 py-3 text-base"
+                  >
+                    ↺ De novo
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           {phase === "reading" && current && current.scene.choices.length > 0 && (
             <div className="grid gap-3 pb-4">

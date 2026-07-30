@@ -118,6 +118,6 @@ than it looks.
   [decisions.md](decisions.md#the-generation-ceiling-is-on-the-server).
 - **No linter.** Neither eslint nor prettier configured; CI runs `typecheck`,
   `test` and `build`.
-- **Tests only for the parser.** [lib/stream-json.test.ts](../lib/stream-json.test.ts)
-  covers `FieldReader` and `Sentences`. `validateScene` and the route have no
-  tests.
+- **The route's own file is untested.** `lib/scene-route.ts` carries the logic and
+  is covered; `app/api/scene/route.ts` is four lines of Next wiring on top of it
+  and is not.

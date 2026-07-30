@@ -30,10 +30,7 @@ describe("pickDeviceVoice", () => {
       { name: "Google português do Brasil", lang: "pt-BR" },
       { name: "Google português", lang: "pt-PT" },
     ];
-    assert.equal(
-      pickDeviceVoice(android)?.name,
-      "Google português do Brasil",
-    );
+    assert.equal(pickDeviceVoice(android)?.name, "Google português do Brasil");
   });
 
   it("prefers pt-BR over pt-PT", () => {

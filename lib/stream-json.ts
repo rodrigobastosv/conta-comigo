@@ -54,7 +54,9 @@ export class FieldReader {
         if (escape === "u") {
           // \uXXXX needs 4 hex digits; if they have not all arrived, wait for the next chunk.
           if (i + 5 >= this.buffer.length) break;
-          out += String.fromCharCode(parseInt(this.buffer.slice(i + 2, i + 6), 16));
+          out += String.fromCharCode(
+            parseInt(this.buffer.slice(i + 2, i + 6), 16),
+          );
           i += 6;
           continue;
         }

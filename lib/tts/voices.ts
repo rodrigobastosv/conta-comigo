@@ -24,7 +24,8 @@ export const VOICES: Voice[] = [
   {
     id: "dispositivo",
     label: "A voz do aparelho",
-    description: "A voz que já vem no celular ou tablet. Não custa nada e funciona sem internet.",
+    description:
+      "A voz que já vem no celular ou tablet. Não custa nada e funciona sem internet.",
     provider: "device",
     // Null on purpose: the available voices differ per device, so the queue asks
     // for pt-BR and takes what this one has. Naming a voice here would make the

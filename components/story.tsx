@@ -7,7 +7,12 @@ import { sentenceRange } from "@/lib/tts/highlight";
 import { PlaybackQueue } from "@/lib/tts/queue";
 import { deviceSpeaker, deviceSpeechAvailable } from "@/lib/tts/speaker";
 import { defaultVoice } from "@/lib/tts/voices";
-import { FINAL_BEAT, type Beat, type Scene, type ReadingLevel } from "@/lib/types";
+import {
+  FINAL_BEAT,
+  type Beat,
+  type Scene,
+  type ReadingLevel,
+} from "@/lib/types";
 
 /** A node of the path travelled. In memory today; becomes the `scenes` table later. */
 type PathNode = {
@@ -63,13 +68,10 @@ export function Story({ title }: { title: string }) {
     return queue.current;
   }, []);
 
-  const setNarration = useCallback(
-    (on: boolean) => {
-      wantsNarration.current = on;
-      setNarrating(on);
-    },
-    [],
-  );
+  const setNarration = useCallback((on: boolean) => {
+    wantsNarration.current = on;
+    setNarrating(on);
+  }, []);
 
   // Leaving the page mid-sentence must not keep talking.
   useEffect(() => silence, [silence]);
@@ -304,23 +306,25 @@ export function Story({ title }: { title: string }) {
             </div>
           )}
 
-          {phase === "reading" && current && current.scene.choices.length > 0 && (
-            <div className="grid gap-3 pb-4">
-              {current.scene.choices.map((choice) => (
-                <button
-                  key={choice.label}
-                  type="button"
-                  onClick={() => choose(choice.label)}
-                  className="flex items-center gap-4 rounded-2xl border-2 border-ink/15 bg-white/60 px-5 py-5 text-left text-xl active:border-shop active:bg-shop/10"
-                >
-                  <span aria-hidden className="text-4xl">
-                    {choice.icon}
-                  </span>
-                  <span>{choice.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
+          {phase === "reading" &&
+            current &&
+            current.scene.choices.length > 0 && (
+              <div className="grid gap-3 pb-4">
+                {current.scene.choices.map((choice) => (
+                  <button
+                    key={choice.label}
+                    type="button"
+                    onClick={() => choose(choice.label)}
+                    className="flex items-center gap-4 rounded-2xl border-2 border-ink/15 bg-white/60 px-5 py-5 text-left text-xl active:border-shop active:bg-shop/10"
+                  >
+                    <span aria-hidden className="text-4xl">
+                      {choice.icon}
+                    </span>
+                    <span>{choice.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
           {phase === "end" && (
             <div className="grid gap-3 pb-4">

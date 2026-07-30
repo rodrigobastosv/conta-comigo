@@ -3,8 +3,7 @@ import { describe, it } from "node:test";
 import { FieldReader, Sentences } from "./stream-json.ts";
 
 const SCENE = {
-  text:
-    'A loja apareceu na esquina. "Toda coisa perdida quer voltar pra casa", disse Dona Vitória.\nFarelo abriu um olho só. Um chinelo amarelo tossiu na gaveta!',
+  text: 'A loja apareceu na esquina. "Toda coisa perdida quer voltar pra casa", disse Dona Vitória.\nFarelo abriu um olho só. Um chinelo amarelo tossiu na gaveta!',
   new_facts: ["o objeto perdido é um chinelo de tricô amarelo"],
   choices: [
     { label: "Abrir a gaveta", icon: "🗄️" },

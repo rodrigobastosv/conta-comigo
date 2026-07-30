@@ -95,7 +95,10 @@ export async function* generateScene(
       return;
     }
 
-    yield { type: "scene", scene: validateScene(JSON.parse(raw), request.beat) };
+    yield {
+      type: "scene",
+      scene: validateScene(JSON.parse(raw), request.beat),
+    };
   } catch (error) {
     // The detail stays in the server log; the client only gets a code.
     console.error("[generateScene]", error);

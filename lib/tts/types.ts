@@ -93,7 +93,10 @@ export type Voice = {
 export type ServerTtsProvider = {
   name: ProviderName;
   /** Streams audio for one sentence. Throws if the voice has no providerVoiceId. */
-  synthesize(sentence: string, voice: Voice): Promise<ReadableStream<Uint8Array>>;
+  synthesize(
+    sentence: string,
+    voice: Voice,
+  ): Promise<ReadableStream<Uint8Array>>;
 };
 
 export function kindOf(voice: Voice): ProviderKind {

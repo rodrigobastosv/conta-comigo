@@ -46,6 +46,153 @@ The event's handler in the client is an empty block today, on purpose. The
 alternative was generating the whole scene's audio once it was finished, and then
 the child faces eight seconds of silence.
 
+## Narration starts free on the device, and buys quality later
+
+Three tiers, cheapest first, all in one catalogue
+([lib/tts/voices.ts](../lib/tts/voices.ts)):
+
+| Tier | Provider | Cost | Needs |
+| --- | --- | --- | --- |
+| **Default** | the device's own `speechSynthesis` | nothing, ever | nothing |
+| **Free quality** | Google Cloud `pt-BR-Chirp3-HD-*` | free inside 1M chars/month | a GCP account |
+| **Paid quality** | ElevenLabs `eleven_flash_v2_5` | ~$0.05/1k chars | a paid plan |
+
+The default is the **device voice** because it is the only option that narrates on
+a fresh clone: no account, no key, no billing, no network. It is not the best voice
+here and is not meant to be — it exists so that narration ships, and so the
+playback queue (issue #13) can be built and tested before anyone signs up for
+anything. Its cost is real, just not in money: the available voices differ per
+device, iOS exposes far fewer than desktop, and there is no delivery control
+beyond rate.
+
+**Google is the free rung with real quality.** 1M characters a month on
+Chirp3-HD, recurring rather than a trial, which at ~3.5k characters per
+five-scene story is roughly **285 stories a month for nothing**. That is well past
+what a family reads.
+
+**ElevenLabs is the paid upgrade**, at about **$0.18 for a story the first time
+and nothing on every re-read**. What the money buys is the deepest library of
+native pt-BR voices to cast characters from, which is what makes adding a voice an
+entry in a file instead of a provider migration.
+
+### Why not OpenAI, and why latency did not decide
+
+`gpt-4o-mini-tts` is the cheapest of the metered options and the only one that
+takes free-text delivery instructions, and it is still out: its voices are
+optimised for English and carry an audible US accent into Portuguese, with
+reports of mixing pt-BR and pt-PT inside one output. A narrator with a foreign
+accent is not a cheaper version of this product for a Brazilian five-year-old; it
+is a different one.
+
+The issue that opened this assumed latency would decide. It did not. Published
+time-to-first-audio is ~75 ms for ElevenLabs Flash v2.5, ~90 ms for Cartesia
+Sonic 3, ~300–600 ms for OpenAI — and the budget is first sound in 1–2 s, which
+also has to cover generating the first sentence. Everything credible fits. Accent,
+licensing and the depth of the voice library decided instead.
+
+Cartesia Sonic 3 remains the runner-up on the paid rung: cheaper than ElevenLabs
+and explicitly Brazil-targeted. **Switch if** the bill becomes the binding
+constraint, or if pt-BR pronunciation complaints show up in real scenes.
+
+### Licensing, now that nothing is stored
+
+Since the narration is never kept (see below), the only right we need is the right
+to generate audio and play it to the family that asked for it. All three tiers
+grant that plainly.
+
+What went away with the cache: Google's guidance covers per-request generation for
+one end user but draws a line at "rebundling as a media library", and a stored
+per-family archive sat close enough to that line to need a lawyer. Not storing is
+the cheapest possible answer to that question.
+
+**The ElevenLabs free tier is not a fourth rung, and storage is not the reason.**
+It is restricted to personal, non-commercial use and requires attribution when
+you publish — neither of which is unlocked by keeping no files. But the binding
+constraint is arithmetic: 10,000 credits a month is about 10 minutes of audio, an
+`ouvir` scene read slowly runs about a minute, so a five-scene story is ~5 minutes.
+That is **roughly two stories a month**, against Google's ~285. It is fine for
+trying a voice out; it is not a tier anyone can read bedtime stories on.
+
+### The numbers above are vendor claims
+
+Nobody has had an account on any of them yet, so nothing here is measured.
+[scripts/bench-tts.ts](../scripts/bench-tts.ts) measures time to first playable
+audio for whichever providers are configured, from where the users are, on real
+sentences. Run it and paste the table here. Vendor marketing is not evidence.
+
+## The narration is not stored anywhere
+
+Every listen re-synthesizes. There is no audio file, no Storage bucket, no
+`audio_url`, no `audio_hash` — the schema deliberately has no audio columns.
+**The text is the archive.**
+
+The original design cached audio keyed by a hash of (text + voice + model). The
+arithmetic did not support it:
+
+| Tier | Cost of one full re-listen (~3.5k chars) | What a cache saves |
+| --- | --- | --- |
+| Device voice (the default) | nothing | nothing — there is no file to store |
+| Google, inside the free quota | nothing | nothing, until ~285 listens/month |
+| ElevenLabs paid | ~$0.18 | ~$0.18, per repeat of the same scene in the same voice |
+
+So a cache pays only on a metered provider, only for a repeat listen, and only
+while the voice is unchanged — change the voice and it was invalid anyway.
+
+**And dropping it costs no latency at all**, which is what settles it. Synthesis is
+per sentence, so a re-listen pays exactly what the first listen paid, and the first
+listen already has to meet the 1–2 s budget. Re-synthesizing is not a degraded
+experience; it is an identical one.
+
+What not storing buys, beyond the machinery it deletes:
+
+- **Less of a child's data at rest.** Audio of a child's stories is more personal
+  data to secure, to cover with RLS, and to erase when an account is deleted.
+- **The Google licensing question disappears.** Nothing stored, nothing to argue
+  about.
+- **A schema mismatch dissolves.** `audio_url`/`audio_hash` were per *scene* while
+  synthesis is per *sentence*; caching properly needed a related table.
+
+**Bring it back when** we are on a metered provider *and* measurement shows repeat
+listens of the same scene in the same voice are common. Both halves matter, and
+both are measurable — do not re-add this on a hunch. Adding a nullable column
+later is a trivial migration; the cost of guessing wrong now is a Storage bucket
+full of children's voices we never needed.
+
+The one real thing lost: a stored file would preserve the exact reading a child
+heard, which is a keepsake argument for a product built on re-reading. If that is
+what someone wants later, it is a feature ("save this story"), not a cache.
+
+### One consequence worth seeing early
+
+The device voice is client-side, so it has no route, no audio file, no cache and
+no cost — issue #12 exists only for the server tiers. `ProviderKind` in
+[lib/tts/types.ts](../lib/tts/types.ts) is that fork, and the playback queue
+branches on it exactly once.
+
+## A voice is a character, and its id is permanent
+
+[lib/tts/voices.ts](../lib/tts/voices.ts) holds the catalogue. Two ids exist,
+`dispositivo`, `vitoria` and `contador`, and they are what
+`profiles.preferred_voice` stores.
+
+Never rename one and never re-cast one onto a different-sounding voice by
+accident. Both are silent failures of the same kind: the parent chose a narrator
+for their child, and one day a stranger reads the bedtime story. The provider and
+its own id are separate fields precisely so a voice can move between providers —
+`vitoria` on Google today, on ElevenLabs the day someone pays — without touching a
+single stored profile. Moving a voice deliberately is fine; it changes how it
+sounds, so say so where parents can see it.
+
+The same applies to `DEFAULT_VOICE_ID`. It is `dispositivo` so that a fresh clone
+narrates with no account at all. Changing it silently changes the narrator of
+every profile that never picked one, which makes it a decision to record here
+rather than a tweak.
+
+A male voice does not contradict the constitution's "Você é a NARRADORA". The
+narrator never refers to herself — that is a limit in
+[story-bible.md](story-bible.md) — so nothing the child hears is gendered, and the
+word only ever addresses the model.
+
 ## The `AudioContext` is unlocked before there is any audio
 
 [lib/audio.ts](../lib/audio.ts) creates and calls `resume()` on the `AudioContext`

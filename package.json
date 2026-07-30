@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test 'lib/**/*.test.ts'"
+    "test": "node --experimental-strip-types --test 'lib/**/*.test.ts'",
+    "voices:list": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/list-voices.ts",
+    "tts:bench": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/bench-tts.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

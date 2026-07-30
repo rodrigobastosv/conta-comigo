@@ -20,13 +20,26 @@ Ready:
 - `AudioContext` already unlocked on the user gesture
   ([lib/audio.ts](../lib/audio.ts)), with `audioContext()` exported for the queue
   to use.
-- `scenes.audio_url` and `scenes.audio_hash` columns in the schema, for caching by
-  hash of (text + voice + model).
 - `profiles.preferred_voice`.
+- The decision **not** to store audio: every listen re-synthesizes, and the schema
+  has no audio columns. See
+  [decisions.md](decisions.md#the-narration-is-not-stored-anywhere).
+- The providers are chosen, in three tiers: the device's own voice for free,
+  Google Chirp3-HD inside a free monthly quota, ElevenLabs when it is worth
+  paying. See
+  [decisions.md](decisions.md#narration-starts-free-on-the-device-and-buys-quality-later).
+- The voice catalogue and the provider seam in [lib/tts/](../lib/tts/), so adding
+  a voice is adding an entry, and re-casting one onto another provider does not
+  orphan a stored profile.
 
-Missing: choosing the pt-BR voice provider, the route that generates audio per
-sentence, and the playback queue in the client — the `sentence` event handler in
-[components/story.tsx](../components/story.tsx) is an empty block today.
+Missing: the playback queue in the client — the `sentence` event handler in
+[components/story.tsx](../components/story.tsx) is an empty block today — and,
+for the server tiers only, the route that generates audio per sentence.
+
+**The device tier needs no account, so the playback queue can be built and shipped
+before anyone signs up for anything.** That is the reason it is the default. The
+server tiers additionally need a key, and `npm run tts:bench` to turn the vendors'
+published latency into a measured one.
 
 The project constraint: **first sound in 1–2 s**, playing sentence 1 while
 sentence 3 is still being generated. Generating the whole scene's audio once it is

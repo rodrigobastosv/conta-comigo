@@ -382,8 +382,8 @@ voice list as its test fixture, so this stays fixed.
 
 ## The reading-level rules are numeric on purpose
 
-"Suitable for a 5-year-old" is not testable. "Average sentence of 8 to 14 words"
-and "90 to 140 words in this scene" are.
+"Suitable for a 5-year-old" is not testable. "Average sentence of at most 14
+words" and "90 to 140 words in this scene" are.
 
 That is what [scripts/eval.ts](../scripts/eval.ts) measures on every prompt
 change. A rule that cannot be measured does not go into
@@ -404,15 +404,63 @@ its own rules disagree:
   **no case needed a second attempt** — the structural contract is solid; it is
   the prose targets that are off.
 
-Two ways to close it, and it is a prose decision, not a code one: lower the floor
-to what a five-year-old actually wants, or make the prompt defend it. Either way
-the change starts in [story-bible.md](story-bible.md) — and the number to beat is
-in [lib/eval/baseline.json](../lib/eval/baseline.json).
+Both turned out to be the rule's fault, not the narrator's, and both for the same
+reason: a word count calibrated on English intuition, applied to Portuguese. `v3`
+fixes the two numbers and scores **8/10**. The two that still fail are labels that
+genuinely ran away — *"Levar o óculos pra rua e seguir o barulho"* is two actions
+joined by an *e* — which is the ceiling doing its job rather than firing on
+well-formed prose.
 
-There is also a wording gap worth reconciling: this document says "average
-sentence", the prompt says *"Frases de 8 a 14 palavras"* — every sentence. The
-evaluation measures the average, following this document, because prose wins. If
-the intent is per-sentence, say so here first.
+### Why `v3` removed the floor instead of lowering it
+
+Reading the scenes that failed settles it, and settles it the other way from what
+"the model is undershooting" suggests. The 5.8 came from this:
+
+> *Tique, tique, tique.* … *— Meu! — disse a gralha.* … *Silêncio. Não latiu.*
+
+That is not a narrator falling short of a target. That is the rhythm of reading
+out loud — the pause, the one-word beat, the line of dialogue — and the floor was
+scoring it as a defect. A floor on mean sentence length can only be satisfied by
+padding, and padding is the opposite of what `ouvir` is for.
+
+So `ouvir` keeps the ceiling and loses the minimum. **What tires a five-year-old's
+ear is the long sentence, never the short one**, and there was never a product
+reason to want the average pulled up. Put the floor back and you are asking the
+narrator to write worse.
+
+This also closes the wording gap that was open here: the document said "average
+sentence", the prompt said *"Frases de 8 a 14 palavras"* — every sentence. The
+prompt now asks for a per-sentence ceiling and the evaluation scores the mean,
+with `longest-sentence` as a warning for the outlier the mean hides. Failing a
+whole scene over one 15-word sentence would make the evaluation flaky without
+making a single story better.
+
+### Why the choice-label ceiling went from 4 words to 5
+
+Same disease, and it needed the labels to diagnose — the violation used to report
+the count alone, which cannot tell a rule the model broke from a rule that is
+wrong. It reports the label now. These are what broke a 2–4 word ceiling:
+
+> *"Seguir o faro do Farelo"* · *"Abrir a gaveta da luva"* ·
+> *"Colocar no banco da praça"* · *"Levar o chinelo na mão"*
+
+Every one is verb-first, concrete and drawable — the thing the rule is actually
+protecting. They run to five words because **Portuguese spends a word on the
+article and the preposition where English spends none**: *"Abrir a gaveta **da**
+luva"* is structurally the same label as the approved *"Abrir a porta azul"*, one
+word longer only because the noun is qualified by another noun instead of an
+adjective.
+
+The proof that the count was never the real criterion is that the bible's own
+rejected example, *"Investigar a origem do som"*, is **also five words**. Same
+length, and it fails for the reason that matters: *origem do som* cannot be drawn.
+So the prose now names the criterion — can the child draw it? — and uses the two
+five-word examples to show that length does not separate them. The ceiling stays
+as a cheap guard against a label that runs away, not as the test.
+
+The visualisable half stays a human judgment. It is not automatable, and a check
+that guesses at it would cry wolf; see the note on precision in
+[lib/eval/rules.ts](../lib/eval/rules.ts).
 
 ### What the v3 run found, on twice the evidence
 

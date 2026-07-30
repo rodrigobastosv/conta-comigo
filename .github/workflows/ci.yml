@@ -7,25 +7,25 @@ on:
     branches: [main]
 
 jobs:
-  verificar:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
         with:
-          # 22.6+ pelo --experimental-strip-types que o npm test usa.
+          # 22.6+ because of the --experimental-strip-types that npm test uses.
           node-version: 22
           cache: npm
 
       - run: npm ci
 
-      - name: Testes
+      - name: Tests
         run: npm test
 
       - name: Typecheck
         run: npm run typecheck
 
-      # Não precisa de ANTHROPIC_API_KEY: o cliente só é construído em runtime.
+      # Does not need ANTHROPIC_API_KEY: the client is only constructed at runtime.
       - name: Build
         run: npm run build

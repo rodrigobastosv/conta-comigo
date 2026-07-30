@@ -1,0 +1,62 @@
+name: Unsuitable scene
+description: A generated scene violated the constitution's limits
+labels: ["content"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the most useful report this project can get. It does not need to come with a fix.
+
+        **If the violation can be provoked deliberately** through user input (the helper's
+        name, the choice text), it is a security flaw: follow
+        [SECURITY.md](https://github.com/rodrigobastosv/conta-comigo/blob/main/SECURITY.md)
+        instead of opening a public issue.
+
+  - type: textarea
+    id: text
+    attributes:
+      label: The text that came out
+      description: Paste the whole scene, in the original Portuguese.
+    validations:
+      required: true
+
+  - type: input
+    id: path
+    attributes:
+      label: Path of choices up to the scene
+      description: The labels you clicked, in order.
+      placeholder: Abrir a porta azul → Seguir o barulho → Esperar mais um pouco
+    validations:
+      required: true
+
+  - type: dropdown
+    id: limit
+    attributes:
+      label: Which limit was violated
+      options:
+        - Death, injury, blood or serious illness
+        - A real villain (an evil antagonist, defeated instead of understood)
+        - Separation from parents, abandonment, a child lost with no way back
+        - Romance, or judgement of appearance/body/ability
+        - A brand, a third-party character or a product reference
+        - An explicit moral at the end
+        - Tension beyond "will there be enough time?"
+        - The narrator became a character (spoke about herself, asked about real life)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: level
+    attributes:
+      label: Reading level
+      options:
+        - ouvir (~5 years old)
+        - ler (~8 years old)
+    validations:
+      required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: Name given to the helper

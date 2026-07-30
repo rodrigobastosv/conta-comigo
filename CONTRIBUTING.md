@@ -1,100 +1,110 @@
-# Contribuindo
+# Contributing
 
-Obrigado pelo interesse. Este projeto é uma ferramenta que crianças usam, então
-duas coisas pesam mais aqui do que no projeto médio: **a segurança do conteúdo
-gerado** e **a latência até o primeiro som na tela**. Quase toda decisão de
-arquitetura sai de uma dessas duas.
+Thanks for the interest. This project is a tool children use, so two things weigh
+more here than in the average project: **the safety of the generated content** and
+**the latency until the first thing appears on screen**. Almost every architecture
+decision comes out of one of those two.
 
-## Antes de escrever código
+## Before writing code
 
-Leia [docs/story-bible.md](docs/story-bible.md). É a fonte de verdade em prosa do
-que a narradora pode e não pode fazer, e boa parte do código só faz sentido
-depois dele. Depois, [docs/arquitetura.md](docs/arquitetura.md) e
-[docs/decisoes.md](docs/decisoes.md) — o segundo explica escolhas que parecem
-erradas até você saber o motivo.
+Read [docs/story-bible.md](docs/story-bible.md). It is the prose source of truth
+for what the narrator can and cannot do, and much of the code only makes sense
+after it. Then [docs/architecture.md](docs/architecture.md) and
+[docs/decisions.md](docs/decisions.md) — the second explains choices that look
+wrong until you know the reason.
 
-## Ambiente
+## Environment
 
-Requer Node 22.6+ (o `npm test` usa `--experimental-strip-types` para rodar
-TypeScript direto, sem passo de build).
+Requires Node 22.6+ (`npm test` uses `--experimental-strip-types` to run
+TypeScript directly, with no build step).
 
 ```bash
 npm install
-cp .env.example .env.local   # preencha ANTHROPIC_API_KEY
+cp .env.example .env.local   # fill in ANTHROPIC_API_KEY
 npm run dev                  # http://localhost:3000
 ```
 
-Só a `ANTHROPIC_API_KEY` é obrigatória para rodar. Sem as variáveis do Supabase o
-app funciona inteiro em memória — a história vai de ponta a ponta, mas recarregar
-a página perde o caminho percorrido. Para mexer em prompt, streaming ou UI isso
-basta.
+Only `ANTHROPIC_API_KEY` is required to run. Without the Supabase variables the
+app works entirely in memory — the story goes end to end, but reloading the page
+loses the path travelled. For working on the prompt, streaming or UI, that is
+enough.
 
-Antes de abrir PR:
+Before opening a PR:
 
 ```bash
-npm test          # testes do leitor de JSON em streaming
+npm test          # tests for the streaming JSON reader
 npm run typecheck
 npm run build
 ```
 
-Os três rodam no CI. O `build` não precisa de chave de API.
+All three run in CI. The `build` does not need an API key.
 
-## A regra que mais importa
+## The rule that matters most
 
-**Mudança de comportamento da narradora começa em [docs/story-bible.md](docs/story-bible.md), não no código.**
+**A change in the narrator's behaviour starts in
+[docs/story-bible.md](docs/story-bible.md), not in the code.**
 
-O prompt em [lib/prompts/v1.ts](lib/prompts/v1.ts) é a tradução daquele documento
-para o que vai no `system`. Se você editar o prompt sem editar a prosa, o
-documento vira ficção e a próxima pessoa não tem como saber qual dos dois está
-certo. Ordem: prosa primeiro, prompt depois, `PROMPT_VERSAO` no fim.
+The prompt in [lib/prompts/v1.ts](lib/prompts/v1.ts) is that document translated
+into what goes in the `system`. If you edit the prompt without editing the prose,
+the document becomes fiction and the next person has no way to tell which of the
+two is right. Order: prose first, prompt second, `PROMPT_VERSION` last.
 
-Ao mudar a constituição ou as regras de nível de leitura, **suba
-`PROMPT_VERSAO`** em [lib/prompts/v1.ts](lib/prompts/v1.ts). Cada cena guarda
-essa versão, então é o que permite saber com que regras cada pedaço do acervo foi
-gerado.
+When changing the constitution or the reading-level rules, **raise
+`PROMPT_VERSION`** in [lib/prompts/v1.ts](lib/prompts/v1.ts). Every scene stores
+that version, so it is what lets you know which rules each part of the archive was
+generated under.
 
-## O que faz um PR ser aceito rápido
+## What gets a PR accepted quickly
 
-- **Um assunto por PR.** Prompt e streaming em PRs separados.
-- **Teste para lógica de parsing.** [lib/stream-json.ts](lib/stream-json.ts) tem
-  testes porque é onde bug é silencioso: emitir meia sequência de escape não
-  quebra nada, só mostra `ç` na tela de uma criança. Mudou o parser? Teste.
-- **Nada que aumente a latência do primeiro token.** A criança de 5 anos abandona
-  em 3 segundos de tela parada. Se sua mudança faz o servidor esperar o JSON
-  fechar para mandar algo, ela vai ser recusada mesmo que o código esteja bom.
-- **Não interpole nada volátil no `system`.** Ver
-  [docs/decisoes.md](docs/decisoes.md#o-cache-está-no-lugar-certo) — isso
-  invalida o cache do prefixo inteiro e multiplica o custo por chamada.
-- **Erro para o cliente é código, não detalhe.** O `console.error` fica no
-  servidor; para o browser vai `falha-na-geracao`. Não vaze stack trace nem
-  mensagem do provedor.
+- **One subject per PR.** Prompt and streaming in separate PRs.
+- **A test for parsing logic.** [lib/stream-json.ts](lib/stream-json.ts) has tests
+  because that is where a bug is silent: emitting half an escape sequence breaks
+  nothing, it just shows `ç` on a child's screen. Changed the parser? Test it.
+- **Nothing that increases the latency of the first token.** A 5-year-old gives up
+  after 3 seconds of a frozen screen. If your change makes the server wait for the
+  JSON to close before sending anything, it will be refused even if the code is
+  good.
+- **Do not interpolate anything volatile into the `system`.** See
+  [docs/decisions.md](docs/decisions.md#the-cache-is-in-the-right-place) — it
+  invalidates the whole prefix's cache and multiplies the cost per call.
+- **Error to the client is a code, not a detail.** The `console.error` stays on the
+  server; the browser gets `generation-failed`. Do not leak stack traces or the
+  provider's message.
 
-## Estilo
+## Style
 
-Nomes de identificadores, comentários e documentação em **português**. O código
-existente é consistente nisso (`gerarCena`, `LeitorDeCampo`, `batida`); um
-`generateScene` no meio faz o leitor trocar de idioma a cada arquivo.
+Identifiers, comments, documentation and commit messages in **English**. The code
+is consistent about it (`generateScene`, `FieldReader`, `beat`); a `gerarCena` in
+the middle makes the reader switch languages every file.
 
-Comentário explica **por que**, não o que. O padrão do repositório é comentário
-que registra a decisão e o que acontece se você desfizer ela — copie esse tom.
+**Except for the narrator's prose, which stays in pt-BR**: the constitution and
+reading-level rules in [lib/prompts/v1.ts](lib/prompts/v1.ts), the story bibles in
+[lib/story-bibles/](lib/story-bibles/), [docs/story-bible.md](docs/story-bible.md),
+and the UI strings the child reads. That text is the product — a narrator speaking
+Brazilian Portuguese to a Brazilian child. Translating it changes what the child
+hears, not how the code reads. The `ReadingLevel` values `'ouvir' | 'ler'` sit on
+that side of the line too: they are in the prompt and in the database constraint.
 
-Sem prettier/eslint configurado no momento. Siga a formatação dos arquivos
-vizinhos: 2 espaços, aspas duplas, ponto e vírgula.
+A comment explains **why**, not what. The repository's pattern is a comment that
+records the decision and what happens if you undo it — copy that tone.
 
-## Conteúdo gerado
+No prettier/eslint configured at the moment. Follow the formatting of neighbouring
+files: 2 spaces, double quotes, semicolons.
 
-Se você encontrar uma cena que viola os limites da constituição (morte, vilão de
-verdade, moral explícita, abandono), abra issue com o **caminho de escolhas que
-levou até ela** e o texto que saiu. É o relatório mais útil que existe para este
-projeto, e não precisa vir com correção.
+## Generated content
 
-Se a violação for provocável de propósito por entrada do usuário, é falha de
-segurança: siga [SECURITY.md](SECURITY.md) em vez de abrir issue pública.
+If you find a scene that violates the constitution's limits (death, a real
+villain, an explicit moral, abandonment), open an issue with the **path of choices
+that led to it** and the text that came out. It is the most useful report this
+project can get, and it does not need to come with a fix.
 
-## Código de conduta
+If the violation can be provoked deliberately through user input, it is a security
+flaw: follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
 
-Participando você concorda com o [código de conduta](CODE_OF_CONDUCT.md).
+## Code of conduct
 
-## Licença
+By participating you agree to the [code of conduct](CODE_OF_CONDUCT.md).
 
-Contribuições entram sob a [licença MIT](LICENSE) do projeto.
+## Licence
+
+Contributions are made under the project's [MIT licence](LICENSE).

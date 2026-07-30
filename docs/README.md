@@ -1,39 +1,49 @@
-# Documentação
+# Documentation
 
-Quatro documentos, com papéis que não se sobrepõem. Se você for adicionar
-documentação, encaixe em um destes em vez de criar um quinto arquivo — a razão de
-serem poucos é que ninguém precise adivinhar onde uma informação vive.
+Four documents, with roles that do not overlap. If you are adding documentation,
+fit it into one of these instead of creating a fifth file — the reason there are
+so few is so nobody has to guess where a piece of information lives.
 
-| Documento | Responde |
+| Document | Answers |
 | --- | --- |
-| [story-bible.md](story-bible.md) | O que a narradora pode e não pode fazer. **Fonte de verdade.** |
-| [arquitetura.md](arquitetura.md) | Como o código está montado e por onde uma cena passa. |
-| [decisoes.md](decisoes.md) | Por que uma escolha estranha do código é a certa. |
-| [roadmap.md](roadmap.md) | O que não existe ainda e onde o gancho já está. |
+| [story-bible.md](story-bible.md) | What the narrator can and cannot do. **Source of truth.** Written in pt-BR, like the prompt it governs. |
+| [architecture.md](architecture.md) | How the code is put together and where a scene travels. |
+| [decisions.md](decisions.md) | Why a strange-looking choice in the code is the right one. |
+| [roadmap.md](roadmap.md) | What does not exist yet and where the hook already is. |
 
-## Por onde começar
+## Where to start
 
-**Vai mexer em prompt, personagem ou limite de conteúdo?**
-[story-bible.md](story-bible.md) primeiro, sempre. O prompt em
-[lib/prompts/v1.ts](../lib/prompts/v1.ts) é a tradução desse documento para o que
-vai no `system` — editar o código sem editar a prosa faz o documento virar ficção,
-e a próxima pessoa não tem como saber qual dos dois está certo.
+**Touching the prompt, a character or a content limit?**
+[story-bible.md](story-bible.md) first, always. The prompt in
+[lib/prompts/v1.ts](../lib/prompts/v1.ts) is that document translated into what
+goes in the `system` — editing the code without editing the prose turns the
+document into fiction, and the next person has no way to tell which of the two is
+right.
 
-**Vai mexer em streaming, rota, cache ou banco?**
-[arquitetura.md](arquitetura.md), depois [decisoes.md](decisoes.md).
+**Touching streaming, the route, the cache or the database?**
+[architecture.md](architecture.md), then [decisions.md](decisions.md).
 
-**Achou algo no código que parece errado?**
-Procure em [decisoes.md](decisoes.md) antes de corrigir. A ordem dos campos do
-schema, o `AudioContext` que ninguém usa e o handler de evento vazio são todos
-deliberados e todos têm motivo escrito.
+**Found something in the code that looks wrong?**
+Look in [decisions.md](decisions.md) before fixing it. The field order in the
+schema, the `AudioContext` nobody uses and the empty event handler are all
+deliberate and all have a written reason.
 
-**Quer contribuir?** [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Want to contribute?** [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-## A regra de ouro
+## Language
 
-A hierarquia é **prosa → prompt → código**.
+Code, comments and documentation are in **English**. The narrator's prose is not:
+the constitution in [lib/prompts/v1.ts](../lib/prompts/v1.ts), the story bibles in
+[lib/story-bibles/](../lib/story-bibles/), [story-bible.md](story-bible.md) and
+the UI strings stay in pt-BR, because that is the product — a narrator speaking
+Brazilian Portuguese to a Brazilian child. Translating it would change what the
+child hears, not how the code reads.
 
-`docs/story-bible.md` manda em `lib/prompts/v1.ts`, que manda no resto. Ao mudar a
-constituição ou as regras de nível de leitura, suba `PROMPT_VERSAO` — cada cena
-guarda essa versão, e é o que permite saber com que regras cada pedaço do acervo
-foi gerado.
+## The golden rule
+
+The hierarchy is **prose → prompt → code**.
+
+`docs/story-bible.md` governs `lib/prompts/v1.ts`, which governs everything else.
+When changing the constitution or the reading-level rules, raise `PROMPT_VERSION`
+— every scene stores that version, and it is what lets you know which rules each
+part of the archive was generated under.

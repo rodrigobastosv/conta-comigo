@@ -1,110 +1,113 @@
--- Conta Comigo — grafo de cenas.
+-- Conta Comigo — the scene graph.
 --
--- A ideia central: nada é sobrescrito. Escolher outro caminho cria uma nova cena
--- filha do MESMO pai. O acervo cresce, e o caminho percorrido (subindo por
--- cena_pai_id) é o livrinho que a criança relê depois.
+-- The central idea: nothing is overwritten. Taking another path creates a new
+-- scene under the SAME parent. The archive grows, and the path travelled
+-- (climbing parent_scene_id) is the little book the child re-reads later.
 
 create extension if not exists "pgcrypto";
 
--- Uma conta por adulto. As crianças não têm login.
-create table perfis (
-  id             uuid primary key default gen_random_uuid(),
-  responsavel_id uuid not null references auth.users (id) on delete cascade,
-  apelido        text not null,
-  idade          smallint not null check (idade between 2 and 14),
-  nivel_leitura  text not null check (nivel_leitura in ('ouvir', 'ler')),
-  voz_preferida  text,
-  -- Modo dos pais: medos a evitar, nomes proibidos. Entra no prompt como
-  -- restricoesExtra. Vazio hoje, a estrutura já existe.
-  restricoes     jsonb not null default '[]'::jsonb,
-  criado_em      timestamptz not null default now()
-);
-
-create table historias (
+-- One account per adult. Children do not have logins.
+create table profiles (
   id            uuid primary key default gen_random_uuid(),
-  perfil_id     uuid not null references perfis (id) on delete cascade,
-  -- Qual bíblia (mundo) foi usada: 'loja-de-coisas-perdidas'.
-  bible_id      text not null,
-  titulo        text not null,
-  -- Nome que a criança deu ao ajudante. Perguntado a cada história e apelido
-  -- de ficção, não identidade — mas fica aqui porque a coerência entre cenas e
-  -- o livrinho dependem dele (e o nome já está dentro do texto de toda forma).
-  nome_ajudante text not null,
-  criada_em     timestamptz not null default now(),
-  encerrada_em  timestamptz
+  guardian_id   uuid not null references auth.users (id) on delete cascade,
+  nickname      text not null,
+  age           smallint not null check (age between 2 and 14),
+  -- Values stay in Portuguese: they are also in the prompt and in ReadingLevel.
+  reading_level text not null check (reading_level in ('ouvir', 'ler')),
+  preferred_voice text,
+  -- Parents' mode: fears to avoid, forbidden names. Reaches the prompt as
+  -- extraRestrictions. Empty today, the structure already exists.
+  restrictions  jsonb not null default '[]'::jsonb,
+  created_at    timestamptz not null default now()
 );
 
-create table cenas (
-  id            uuid primary key default gen_random_uuid(),
-  historia_id   uuid not null references historias (id) on delete cascade,
-  cena_pai_id   uuid references cenas (id) on delete cascade,
-  batida        smallint not null check (batida between 1 and 5),
-  texto         text not null,
-  -- Camada 3 do story bible: os fatos que ESTA cena tornou verdade.
-  fatos_novos   jsonb not null default '[]'::jsonb,
-  -- [] na batida 5 — é o sinal de fim de história para a UI.
-  escolhas      jsonb not null default '[]'::jsonb,
-  -- Rótulo da escolha que levou até aqui. Null na cena raiz.
-  escolha_entrada text,
-  -- Áudio da narração, no Storage. Cache por hash de (texto + voz + modelo).
-  audio_url     text,
-  audio_hash    text,
-  prompt_versao text not null,
-  criada_em     timestamptz not null default now()
+create table stories (
+  id          uuid primary key default gen_random_uuid(),
+  profile_id  uuid not null references profiles (id) on delete cascade,
+  -- Which bible (world) was used: 'loja-de-coisas-perdidas'.
+  bible_id    text not null,
+  title       text not null,
+  -- The name the child gave the helper. Asked once per story and a fiction
+  -- nickname, not an identity — but it lives here because coherence between
+  -- scenes and the little book depend on it (and the name is inside the text
+  -- anyway).
+  helper_name text not null,
+  created_at  timestamptz not null default now(),
+  ended_at    timestamptz
 );
 
-create index cenas_por_historia on cenas (historia_id);
-create index cenas_por_pai on cenas (cena_pai_id);
--- Um pai não deve ter duas cenas geradas para a mesma escolha: reuse, não regere.
-create unique index cenas_pai_escolha
-  on cenas (cena_pai_id, escolha_entrada)
-  where cena_pai_id is not null;
+create table scenes (
+  id              uuid primary key default gen_random_uuid(),
+  story_id        uuid not null references stories (id) on delete cascade,
+  parent_scene_id uuid references scenes (id) on delete cascade,
+  beat            smallint not null check (beat between 1 and 5),
+  text            text not null,
+  -- Layer 3 of the story bible: the facts THIS scene made true.
+  new_facts       jsonb not null default '[]'::jsonb,
+  -- [] on beat 5 — it is the end-of-story signal for the UI.
+  choices         jsonb not null default '[]'::jsonb,
+  -- Label of the choice that led here. Null on the root scene.
+  entry_choice    text,
+  -- Narration audio, in Storage. Cached by hash of (text + voice + model).
+  audio_url       text,
+  audio_hash      text,
+  prompt_version  text not null,
+  created_at      timestamptz not null default now()
+);
 
--- Caminho da raiz até uma cena. É isto que monta o livrinho e o conjunto de
--- fatos daquele ramo — ramos diferentes têm verdades diferentes sem se contaminar.
-create or replace function caminho_da_cena(cena uuid)
+create index scenes_by_story on scenes (story_id);
+create index scenes_by_parent on scenes (parent_scene_id);
+-- A parent must not have two scenes generated for the same choice: reuse, don't regenerate.
+create unique index scenes_parent_choice
+  on scenes (parent_scene_id, entry_choice)
+  where parent_scene_id is not null;
+
+-- Path from the root down to a scene. This is what assembles the little book and
+-- the set of facts of that branch — different branches hold different truths
+-- without contaminating each other.
+create or replace function scene_path(scene uuid)
 returns table (
   id uuid,
-  batida smallint,
-  texto text,
-  fatos_novos jsonb,
-  escolha_entrada text,
-  profundidade int
+  beat smallint,
+  text text,
+  new_facts jsonb,
+  entry_choice text,
+  depth int
 )
 language sql stable as $$
-  with recursive subida as (
-    select c.id, c.cena_pai_id, c.batida, c.texto, c.fatos_novos,
-           c.escolha_entrada, 0 as profundidade
-      from cenas c where c.id = cena
+  with recursive climb as (
+    select s.id, s.parent_scene_id, s.beat, s.text, s.new_facts,
+           s.entry_choice, 0 as depth
+      from scenes s where s.id = scene
     union all
-    select p.id, p.cena_pai_id, p.batida, p.texto, p.fatos_novos,
-           p.escolha_entrada, s.profundidade + 1
-      from cenas p join subida s on p.id = s.cena_pai_id
+    select p.id, p.parent_scene_id, p.beat, p.text, p.new_facts,
+           p.entry_choice, c.depth + 1
+      from scenes p join climb c on p.id = c.parent_scene_id
   )
-  select id, batida, texto, fatos_novos, escolha_entrada, profundidade
-    from subida order by profundidade desc;
+  select id, beat, text, new_facts, entry_choice, depth
+    from climb order by depth desc;
 $$;
 
--- Zero dado de criança sai daqui. Cada responsável só vê o que é dele.
-alter table perfis enable row level security;
-alter table historias enable row level security;
-alter table cenas enable row level security;
+-- Zero child data leaves here. Each guardian only sees what is theirs.
+alter table profiles enable row level security;
+alter table stories enable row level security;
+alter table scenes enable row level security;
 
-create policy "perfis do responsavel" on perfis
-  for all using (responsavel_id = auth.uid());
+create policy "guardian's profiles" on profiles
+  for all using (guardian_id = auth.uid());
 
-create policy "historias do responsavel" on historias
+create policy "guardian's stories" on stories
   for all using (
     exists (
-      select 1 from perfis p
-       where p.id = historias.perfil_id and p.responsavel_id = auth.uid()
+      select 1 from profiles p
+       where p.id = stories.profile_id and p.guardian_id = auth.uid()
     )
   );
 
-create policy "cenas do responsavel" on cenas
+create policy "guardian's scenes" on scenes
   for all using (
     exists (
-      select 1 from historias h join perfis p on p.id = h.perfil_id
-       where h.id = cenas.historia_id and p.responsavel_id = auth.uid()
+      select 1 from stories s join profiles p on p.id = s.profile_id
+       where s.id = scenes.story_id and p.guardian_id = auth.uid()
     )
   );

@@ -1,21 +1,27 @@
-import type { Batida } from "@/lib/tipos";
+import type { Beat } from "@/lib/types";
 
+/**
+ * The filename mirrors `id`, which is what goes into `stories.bible_id`. Keep it
+ * that way: an archived story records the id, and finding the world it was
+ * generated in should not require a lookup table. That is also why the id stays
+ * in Portuguese while the code around it is English.
+ */
 export type StoryBible = {
   id: string;
-  titulo: string;
-  refrao: string;
-  /** Camada 2: renderizada no prompt de sistema, íntegra, em toda chamada. */
-  texto: string;
-  /** Instrução por batida. Recebida pelo prompt como parâmetro. */
-  batidas: Record<Batida, string>;
+  title: string;
+  refrain: string;
+  /** Layer 2: rendered into the system prompt, in full, on every call. */
+  text: string;
+  /** Instruction per beat. Passed into the prompt as a parameter. */
+  beats: Record<Beat, string>;
 };
 
-export const LOJA_DE_COISAS_PERDIDAS: StoryBible = {
+export const LOST_THINGS_SHOP: StoryBible = {
   id: "loja-de-coisas-perdidas",
-  titulo: "A Loja de Coisas Perdidas",
-  refrao: "Toda coisa perdida quer voltar pra casa.",
+  title: "A Loja de Coisas Perdidas",
+  refrain: "Toda coisa perdida quer voltar pra casa.",
 
-  texto: `HISTÓRIA: A Loja de Coisas Perdidas
+  text: `HISTÓRIA: A Loja de Coisas Perdidas
 
 MUNDO
 Existe uma loja que só aparece onde alguém perdeu algo importante. Ela chega de
@@ -44,7 +50,7 @@ INVARIANTES (nunca contradiga)
 - O objeto sempre volta pro dono no fim. Sempre.
 - Nada dentro da loja é comprado ou vendido. Não existe dinheiro aqui.`,
 
-  batidas: {
+  beats: {
     1: "CONVITE. A loja aparece. O objeto perdido se apresenta. Termine com 2 escolhas de RUMO.",
     2: "DESCOBERTA. Revele quem é o dono e por que perder aquilo doeu. Termine com 2 escolhas de MÉTODO.",
     3: "COMPLICAÇÃO. O plano encosta num obstáculo — um mal-entendido, nunca um perigo. Termine com 2 escolhas de RISCO.",

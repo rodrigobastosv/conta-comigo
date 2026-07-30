@@ -1,92 +1,93 @@
 /**
- * Saída estruturada + streaming têm um atrito real: o que chega no stream é JSON,
- * não prosa. Se você esperar o JSON fechar para mostrar algo, perde a latência que
- * o streaming existe para ganhar — e criança de 5 anos abandona em 3 segundos de
- * tela parada.
+ * Structured output and streaming have a real conflict: what arrives on the wire
+ * is JSON, not prose. If you wait for the JSON to close before showing anything,
+ * you throw away the very latency streaming exists to win — and a 5-year-old
+ * gives up after 3 seconds of a frozen screen.
  *
- * Este leitor extrai UM campo string de um JSON que ainda está chegando, decodificando
- * escapes e sem nunca emitir meia sequência de escape. É o que permite exibir a cena
- * palavra por palavra e, junto com `Frases`, disparar o TTS por frase.
+ * This reader extracts ONE string field from a JSON that is still arriving,
+ * decoding escapes and never emitting half an escape sequence. It is what lets
+ * the scene appear word by word and, together with `Sentences`, what fires the
+ * TTS per sentence.
  */
-export class LeitorDeCampo {
+export class FieldReader {
   private buffer = "";
-  private cursor = -1; // posição da próxima coisa a decodificar; -1 = ainda não achamos o campo
-  private fechado = false;
-  private readonly marcador: string;
+  private cursor = -1; // next position to decode; -1 = we have not found the field yet
+  private closed = false;
+  private readonly marker: string;
 
-  constructor(campo: string) {
-    this.marcador = `"${campo}"`;
+  constructor(field: string) {
+    this.marker = `"${field}"`;
   }
 
-  get terminou(): boolean {
-    return this.fechado;
+  get done(): boolean {
+    return this.closed;
   }
 
-  /** Recebe um pedaço do JSON e devolve só o texto novo já decodificado. */
-  empurrar(pedaco: string): string {
-    if (this.fechado) return "";
-    this.buffer += pedaco;
+  /** Takes a chunk of the JSON and returns only the new, already decoded text. */
+  push(chunk: string): string {
+    if (this.closed) return "";
+    this.buffer += chunk;
 
     if (this.cursor < 0) {
-      const inicio = this.localizarAberturaDaString();
-      if (inicio < 0) return "";
-      this.cursor = inicio;
+      const start = this.findStringStart();
+      if (start < 0) return "";
+      this.cursor = start;
     }
 
-    let saida = "";
+    let out = "";
     let i = this.cursor;
 
     while (i < this.buffer.length) {
       const c = this.buffer[i];
 
       if (c === '"') {
-        this.fechado = true;
+        this.closed = true;
         i += 1;
         break;
       }
 
       if (c === "\\") {
-        // Precisamos de pelo menos o caractere seguinte para saber o que é.
+        // We need at least the next character to know what this is.
         if (i + 1 >= this.buffer.length) break;
         const escape = this.buffer[i + 1];
 
         if (escape === "u") {
-          // \uXXXX precisa de 4 hex; se não chegaram todos, espere o próximo pedaço.
+          // \uXXXX needs 4 hex digits; if they have not all arrived, wait for the next chunk.
           if (i + 5 >= this.buffer.length) break;
-          saida += String.fromCharCode(parseInt(this.buffer.slice(i + 2, i + 6), 16));
+          out += String.fromCharCode(parseInt(this.buffer.slice(i + 2, i + 6), 16));
           i += 6;
           continue;
         }
 
-        saida += DESESCAPE[escape] ?? escape;
+        out += UNESCAPE[escape] ?? escape;
         i += 2;
         continue;
       }
 
-      saida += c;
+      out += c;
       i += 1;
     }
 
     this.cursor = i;
-    return saida;
+    return out;
   }
 
-  /** Acha `"campo"` seguido de `:` e da abertura da string; devolve o índice do 1º char do valor. */
-  private localizarAberturaDaString(): number {
-    const chave = this.buffer.indexOf(this.marcador);
-    if (chave < 0) return -1;
+  /** Finds `"field"` followed by `:` and the opening quote; returns the index of the value's 1st char. */
+  private findStringStart(): number {
+    const key = this.buffer.indexOf(this.marker);
+    if (key < 0) return -1;
 
-    const doisPontos = this.buffer.indexOf(":", chave + this.marcador.length);
-    if (doisPontos < 0) return -1;
+    const colon = this.buffer.indexOf(":", key + this.marker.length);
+    if (colon < 0) return -1;
 
-    const abertura = this.buffer.indexOf('"', doisPontos + 1);
-    if (abertura < 0) return -1;
+    const opening = this.buffer.indexOf('"', colon + 1);
+    if (opening < 0) return -1;
 
-    return abertura + 1;
+    return opening + 1;
   }
 }
 
-const DESESCAPE: Record<string, string> = {
+const UNESCAPE: Record<string, string> = {
   n: "\n",
   t: "\t",
   r: "\r",
@@ -98,36 +99,36 @@ const DESESCAPE: Record<string, string> = {
 };
 
 /**
- * Quebra texto em frases conforme ele chega. Cada frase completa é entregue uma
- * única vez — é a unidade que o TTS vai receber para tocar numa fila enquanto o
- * resto da cena ainda está sendo gerado.
+ * Splits text into sentences as it arrives. Each complete sentence is delivered
+ * exactly once — it is the unit the TTS receives so it can play in a queue while
+ * the rest of the scene is still being generated.
  */
-export class Frases {
-  private pendente = "";
+export class Sentences {
+  private pending = "";
 
-  empurrar(texto: string): string[] {
-    this.pendente += texto;
-    const prontas: string[] = [];
+  push(text: string): string[] {
+    this.pending += text;
+    const ready: string[] = [];
 
-    // Fim de frase = pontuação final seguida de espaço/quebra de linha.
-    const fimDeFrase = /[.!?…](?=[\s\n])/g;
-    let corte = 0;
+    // End of sentence = final punctuation followed by a space/newline.
+    const sentenceEnd = /[.!?…](?=[\s\n])/g;
+    let cut = 0;
     let m: RegExpExecArray | null;
 
-    while ((m = fimDeFrase.exec(this.pendente)) !== null) {
-      const frase = this.pendente.slice(corte, m.index + 1).trim();
-      if (frase) prontas.push(frase);
-      corte = m.index + 1;
+    while ((m = sentenceEnd.exec(this.pending)) !== null) {
+      const sentence = this.pending.slice(cut, m.index + 1).trim();
+      if (sentence) ready.push(sentence);
+      cut = m.index + 1;
     }
 
-    if (corte > 0) this.pendente = this.pendente.slice(corte);
-    return prontas;
+    if (cut > 0) this.pending = this.pending.slice(cut);
+    return ready;
   }
 
-  /** Chame no fim do stream: a última frase não tem espaço depois da pontuação. */
-  drenar(): string[] {
-    const resto = this.pendente.trim();
-    this.pendente = "";
-    return resto ? [resto] : [];
+  /** Call at the end of the stream: the last sentence has no space after its punctuation. */
+  drain(): string[] {
+    const rest = this.pending.trim();
+    this.pending = "";
+    return rest ? [rest] : [];
   }
 }

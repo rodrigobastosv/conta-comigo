@@ -10,8 +10,8 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    // node --experimental-strip-types (npm test) não resolve extensão: os
-    // arquivos .test.ts importam com o `.ts` explícito.
+    // node --experimental-strip-types (npm test) does not resolve extensions:
+    // the .test.ts files import with an explicit `.ts`.
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "jsx": "preserve",

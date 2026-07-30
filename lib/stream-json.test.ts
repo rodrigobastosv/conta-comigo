@@ -1,81 +1,81 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { Frases, LeitorDeCampo } from "./stream-json.ts";
+import { FieldReader, Sentences } from "./stream-json.ts";
 
-const CENA = {
-  texto:
+const SCENE = {
+  text:
     'A loja apareceu na esquina. "Toda coisa perdida quer voltar pra casa", disse Dona Vitória.\nFarelo abriu um olho só. Um chinelo amarelo tossiu na gaveta!',
-  fatos_novos: ["o objeto perdido é um chinelo de tricô amarelo"],
-  escolhas: [
-    { rotulo: "Abrir a gaveta", icone: "🗄️" },
-    { rotulo: "Perguntar ao Farelo", icone: "🐕" },
+  new_facts: ["o objeto perdido é um chinelo de tricô amarelo"],
+  choices: [
+    { label: "Abrir a gaveta", icon: "🗄️" },
+    { label: "Perguntar ao Farelo", icon: "🐕" },
   ],
 };
 
-function fatiar(texto: string, tamanho: number): string[] {
-  const partes: string[] = [];
-  for (let i = 0; i < texto.length; i += tamanho) {
-    partes.push(texto.slice(i, i + tamanho));
+function slice(text: string, size: number): string[] {
+  const parts: string[] = [];
+  for (let i = 0; i < text.length; i += size) {
+    parts.push(text.slice(i, i + size));
   }
-  return partes;
+  return parts;
 }
 
-describe("LeitorDeCampo", () => {
-  // Pedaços de 1 e 2 chars partem \n e \" no meio — é exatamente o caso que
-  // faria a cena aparecer com lixo na tela se o leitor estivesse errado.
-  for (const tamanho of [1, 2, 3, 7, 50, 5000]) {
-    it(`reconstrói o texto com pedaços de ${tamanho} caractere(s)`, () => {
-      const json = JSON.stringify(CENA);
-      const leitor = new LeitorDeCampo("texto");
-      let montado = "";
+describe("FieldReader", () => {
+  // Chunks of 1 and 2 chars split \n and \" down the middle — exactly the case
+  // that would put garbage on screen if the reader were wrong.
+  for (const size of [1, 2, 3, 7, 50, 5000]) {
+    it(`rebuilds the text with chunks of ${size} character(s)`, () => {
+      const json = JSON.stringify(SCENE);
+      const reader = new FieldReader("text");
+      let assembled = "";
 
-      for (const pedaco of fatiar(json, tamanho)) {
-        montado += leitor.empurrar(pedaco);
+      for (const chunk of slice(json, size)) {
+        assembled += reader.push(chunk);
       }
 
-      assert.equal(montado, CENA.texto);
-      assert.equal(leitor.terminou, true);
+      assert.equal(assembled, SCENE.text);
+      assert.equal(reader.done, true);
     });
   }
 
-  it("ignora tudo depois do fechamento da string", () => {
-    const leitor = new LeitorDeCampo("texto");
-    leitor.empurrar('{"texto":"oi","fatos_novos":["texto: nao é isto"]}');
-    assert.equal(leitor.terminou, true);
-    assert.equal(leitor.empurrar('{"texto":"outro"}'), "");
+  it("ignores everything after the string closes", () => {
+    const reader = new FieldReader("text");
+    reader.push('{"text":"oi","new_facts":["text: nao é isto"]}');
+    assert.equal(reader.done, true);
+    assert.equal(reader.push('{"text":"outro"}'), "");
   });
 
-  it("não emite nada enquanto o campo não aparece", () => {
-    const leitor = new LeitorDeCampo("texto");
-    assert.equal(leitor.empurrar('{"fatos_novos":[],"tex'), "");
-    assert.equal(leitor.empurrar('to":"agora sim"'), "agora sim");
+  it("emits nothing while the field has not appeared", () => {
+    const reader = new FieldReader("text");
+    assert.equal(reader.push('{"new_facts":[],"te'), "");
+    assert.equal(reader.push('xt":"agora sim"'), "agora sim");
   });
 });
 
-describe("Frases", () => {
-  it("quebra o texto nas mesmas frases, qualquer que seja o fatiamento", () => {
-    for (const tamanho of [1, 3, 50, 5000]) {
-      const leitor = new LeitorDeCampo("texto");
-      const frases = new Frases();
-      const colhidas: string[] = [];
+describe("Sentences", () => {
+  it("splits the text into the same sentences, whatever the chunking", () => {
+    for (const size of [1, 3, 50, 5000]) {
+      const reader = new FieldReader("text");
+      const sentences = new Sentences();
+      const collected: string[] = [];
 
-      for (const pedaco of fatiar(JSON.stringify(CENA), tamanho)) {
-        colhidas.push(...frases.empurrar(leitor.empurrar(pedaco)));
+      for (const chunk of slice(JSON.stringify(SCENE), size)) {
+        collected.push(...sentences.push(reader.push(chunk)));
       }
-      colhidas.push(...frases.drenar());
+      collected.push(...sentences.drain());
 
       assert.equal(
-        colhidas.join(" ").replace(/\s+/g, " "),
-        CENA.texto.replace(/\s+/g, " ").trim(),
+        collected.join(" ").replace(/\s+/g, " "),
+        SCENE.text.replace(/\s+/g, " ").trim(),
       );
-      assert.equal(colhidas.length, 4);
+      assert.equal(collected.length, 4);
     }
   });
 
-  it("segura a última frase até drenar (não há espaço depois do ponto final)", () => {
-    const frases = new Frases();
-    assert.deepEqual(frases.empurrar("Oi mundo."), []);
-    assert.deepEqual(frases.drenar(), ["Oi mundo."]);
-    assert.deepEqual(frases.drenar(), []);
+  it("holds the last sentence until drained (there is no space after the full stop)", () => {
+    const sentences = new Sentences();
+    assert.deepEqual(sentences.push("Oi mundo."), []);
+    assert.deepEqual(sentences.drain(), ["Oi mundo."]);
+    assert.deepEqual(sentences.drain(), []);
   });
 });

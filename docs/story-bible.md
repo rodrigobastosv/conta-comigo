@@ -3,6 +3,11 @@
 > Este documento é a fonte de verdade do que o modelo pode e não pode narrar.
 > Ele será traduzido para `lib/prompts/` em código versionado. Alterar aqui primeiro,
 > código depois — e sempre subir a versão do prompt.
+>
+> **Este documento fica em português.** O código e o resto da documentação estão
+> em inglês; a prosa que a narradora lê, não — ela fala pt-BR com uma criança
+> brasileira. Traduzir isto mudaria o produto. Ver
+> [decisions.md](decisions.md#code-is-english-the-narrator-is-not).
 
 ## Por que três camadas
 
@@ -42,7 +47,7 @@ Caloroso, concreto, um pouco engraçado. Humor de situação e de repetição, n
 Objetos e animais podem falar. O extraordinário é tratado como cotidiano — ninguém se
 espanta com uma loja que aparece do nada, isso é normal aqui.
 
-### Nível de leitura (parâmetro `nivel_leitura`)
+### Nível de leitura (parâmetro `reading_level`)
 
 **`ouvir` (≈5 anos)** — o texto existe para ser ouvido.
 - 90–140 palavras por cena.
@@ -109,7 +114,7 @@ O prompt recebe `beat` (1–5) e obedece:
 2. **Descoberta** — quem é o dono, e por que perder aquilo doeu. → 2 escolhas de *método*.
 3. **Complicação** — o plano encosta num obstáculo. Um mal-entendido, não um perigo. → 2 escolhas de *risco*.
 4. **Coragem** — o ajudante resolve com uma ideia sua, não com sorte nem com ajuda adulta. → 2 escolhas de *como entregar*.
-5. **Aconchego** — o objeto volta pro dono. A loja começa a ir embora. **Sem escolhas** — `escolhas: []` encerra a partida e libera o livrinho.
+5. **Aconchego** — o objeto volta pro dono. A loja começa a ir embora. **Sem escolhas** — `choices: []` encerra a partida e libera o livrinho.
 
 A batida 5 sem escolhas é requisito técnico: é o sinal de fim de história para a UI.
 
@@ -120,7 +125,7 @@ A batida 5 sem escolhas é requisito técnico: é o sinal de fim de história pa
 Cada cena gerada devolve, além do texto, os fatos que ela criou:
 
 ```
-fatos_novos: [
+new_facts: [
   "o objeto perdido é um chinelo de tricô amarelo",
   "o dono é o seu Bento, que varre a praça",
   "o chinelo se perdeu num dia de chuva forte"

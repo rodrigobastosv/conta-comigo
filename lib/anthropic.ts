@@ -1,21 +1,21 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 /**
- * Cliente único. Só existe em código de servidor — a chave nunca vai para o browser.
+ * Single client. Server code only — the key never reaches the browser.
  */
 export const anthropic = new Anthropic();
 
-export const MODELO = "claude-opus-5";
+export const MODEL = "claude-opus-5";
 
 /**
- * Streaming, então max_tokens pode ser generoso sem risco de timeout de HTTP.
- * Uma cena no modo `ler` fica em ~350 tokens; o resto é folga para o thinking.
+ * Streaming, so max_tokens can be generous with no risk of an HTTP timeout.
+ * A scene in `ler` mode lands around ~350 tokens; the rest is headroom for thinking.
  */
 export const MAX_TOKENS = 4000;
 
 /**
- * `low` é o ponto de partida: em cena curta com formato rígido ele entrega bem e
- * o primeiro token chega rápido, que é o que importa aqui. Suba para `medium` se
- * a avaliação mostrar que as escolhas estão ficando desequilibradas.
+ * `low` is the starting point: on a short scene with a rigid format it delivers
+ * well and the first token arrives fast, which is what matters here. Raise it to
+ * `medium` if the evaluation shows the choices coming out unbalanced.
  */
 export const EFFORT = "low" as const;

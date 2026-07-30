@@ -1,37 +1,37 @@
-# Política de segurança
+# Security policy
 
-## Reportar uma vulnerabilidade
+## Reporting a vulnerability
 
-**Não abra issue pública** para falha de segurança. Use um destes canais:
+**Do not open a public issue** for a security flaw. Use one of these channels:
 
-- [Security advisory privado](https://github.com/rodrigobastosv/conta-comigo/security/advisories/new) (preferido)
-- E-mail: rodrigobastosv@gmail.com
+- [Private security advisory](https://github.com/rodrigobastosv/conta-comigo/security/advisories/new) (preferred)
+- Email: rodrigobastosv@gmail.com
 
-Inclua o que der: passos para reproduzir, versão/commit, e o impacto que você
-enxerga. Resposta em até 7 dias.
+Include whatever you can: steps to reproduce, version/commit, and the impact you
+see. Response within 7 days.
 
-## O que é especialmente sensível aqui
+## What is especially sensitive here
 
-Este projeto gera conteúdo para crianças e fala com um modelo de linguagem. Além
-das falhas usuais de web, tratamos como vulnerabilidade:
+This project generates content for children and talks to a language model. On top
+of the usual web flaws, we treat these as vulnerabilities:
 
-- **Vazamento da `ANTHROPIC_API_KEY`.** A chave só é lida em código de servidor
-  ([lib/anthropic.ts](lib/anthropic.ts)). Qualquer caminho que a exponha ao
-  browser — variável `NEXT_PUBLIC_*`, log, mensagem de erro devolvida ao cliente
-  — é falha, não bug de estilo.
-- **Burlar o teto de gerações.** O limite vive no servidor, em
-  [app/api/cena/route.ts](app/api/cena/route.ts). Qualquer forma de estourar
-  custo de API contornando esse teto conta como vulnerabilidade.
-- **Injeção de prompt que rompe os limites da narradora.** Se um campo
-  controlado pelo cliente (`nomeAjudante`, `escolhaFeita`, `fatos`) fizer o
-  modelo violar os LIMITES INVIOLÁVEIS da constituição — ver
-  [docs/story-bible.md](docs/story-bible.md) — é falha de segurança do produto.
-  Descreva o payload exato.
-- **Furo de RLS.** As políticas em [supabase/schema.sql](supabase/schema.sql)
-  existem para que nenhum dado de criança cruze de um responsável para outro.
-  Qualquer consulta que atravesse isso é crítica.
+- **Leaking the `ANTHROPIC_API_KEY`.** The key is only read in server code
+  ([lib/anthropic.ts](lib/anthropic.ts)). Any path that exposes it to the browser
+  — a `NEXT_PUBLIC_*` variable, a log, an error message returned to the client —
+  is a flaw, not a style issue.
+- **Bypassing the generation ceiling.** The limit lives on the server, in
+  [app/api/scene/route.ts](app/api/scene/route.ts). Any way of blowing up API cost
+  by getting around that ceiling counts as a vulnerability.
+- **Prompt injection that breaks the narrator's limits.** If a client-controlled
+  field (`helperName`, `choiceMade`, `facts`) makes the model violate the
+  constitution's LIMITES INVIOLÁVEIS — see
+  [docs/story-bible.md](docs/story-bible.md) — it is a product security flaw.
+  Describe the exact payload.
+- **An RLS hole.** The policies in [supabase/schema.sql](supabase/schema.sql) exist
+  so that no child's data crosses from one guardian to another. Any query that
+  gets through that is critical.
 
-## Fora de escopo
+## Out of scope
 
-Relatório automatizado de scanner sem prova de exploração, e falta de
-rate limit em rota que não custa dinheiro.
+Automated scanner reports with no proof of exploitation, and missing rate limits
+on a route that does not cost money.

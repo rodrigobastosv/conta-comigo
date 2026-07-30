@@ -1,35 +1,34 @@
 name: Bug
-description: Algo no app não funciona como deveria
+description: Something in the app does not work as it should
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Para cena gerada com conteúdo inadequado, use o template **Cena inadequada**.
+        For a generated scene with unsuitable content, use the **Unsuitable scene** template.
 
-        Antes de abrir: alguns comportamentos estranhos são deliberados e estão
-        explicados em
-        [docs/decisoes.md](https://github.com/rodrigobastosv/conta-comigo/blob/main/docs/decisoes.md)
-        — por exemplo, não há narração ainda.
+        Before opening: some odd-looking behaviour is deliberate and explained in
+        [docs/decisions.md](https://github.com/rodrigobastosv/conta-comigo/blob/main/docs/decisions.md)
+        — for example, there is no narration yet.
 
   - type: textarea
-    id: esperado
+    id: expected
     attributes:
-      label: O que você esperava
+      label: What you expected
     validations:
       required: true
 
   - type: textarea
-    id: aconteceu
+    id: happened
     attributes:
-      label: O que aconteceu
+      label: What happened
     validations:
       required: true
 
   - type: textarea
-    id: reproduzir
+    id: reproduce
     attributes:
-      label: Como reproduzir
+      label: How to reproduce
       placeholder: |
         1. ...
         2. ...
@@ -37,21 +36,21 @@ body:
       required: true
 
   - type: input
-    id: ambiente
+    id: environment
     attributes:
-      label: Ambiente
+      label: Environment
       placeholder: "Node 22.13, Chrome 140, macOS 15"
 
   - type: textarea
     id: logs
     attributes:
-      label: Erro no console
-      description: Do browser e do terminal do `npm run dev`, se houver.
+      label: Console error
+      description: From the browser and from the `npm run dev` terminal, if any.
       render: shell
 
   - type: checkboxes
     id: supabase
     attributes:
-      label: Configuração
+      label: Configuration
       options:
-        - label: Estou rodando sem as variáveis do Supabase (tudo em memória)
+        - label: I am running without the Supabase variables (everything in memory)

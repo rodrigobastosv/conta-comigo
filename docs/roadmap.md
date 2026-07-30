@@ -90,27 +90,31 @@ and the authentication are missing.
 
 ## Evaluation set
 
-Done: `npm run eval` runs ten fixed openings against the real model and measures
-words per scene, mean words per sentence, the refrain, the choice-label lengths
-and a short list of constitution breaches. Baseline in
-[lib/eval/baseline.json](../lib/eval/baseline.json).
+Done: `npm run eval` runs fourteen fixed openings against the real model, in both
+worlds, and measures words per scene, mean words per sentence, the refrain, the
+choice-label lengths, a short list of constitution breaches, and the rules only an
+invented world can break. Baseline in
+[lib/eval/baseline.json](../lib/eval/baseline.json), now on `v3`.
 
-Missing: acting on what it found. `v2` scores 4/10 — the `ouvir` sentence floor
-of 8 words is not what the model produces and probably not what a five-year-old
-wants. That is a prose change, so it starts in
-[story-bible.md](story-bible.md). See
-[decisions.md](decisions.md#what-the-first-run-found). **It is still open under
-v3**: the invented world did not touch the reading-level rules, so the same floor
-is still pulling against "uma ideia por frase".
+Missing: acting on what it found, which after the `v3` run is a sharper ask than
+it was. `v3` scores **5/14**, and every failure is one of two rules: the `ouvir`
+sentence floor of 8 words (missed in all ten `ouvir` scenes, mean 7.6, across
+*both* worlds) and the `ouvir` choice-label ceiling of 4 (missed six times, always
+by exactly one word).
 
-`v3` added four cases (both invented openings, a mid beat and an ending) and the
-checks that only an invented world can fail: a world that is never declared, a
-refrain declared but never spoken, and the anti-cliché list. **The v2 baseline is
-not comparable to a v3 run** — the prompt changed for both worlds and the case
-count went from 10 to 14. Re-measure before drawing a conclusion.
+That is no longer a hypothesis about one world's prompt — it is the same result in
+a world nobody wrote by hand. The fix is a prose decision and starts in
+[story-bible.md](story-bible.md): floor 6, ceiling 5, then `lib/eval/rules.ts` to
+match, then re-measure. See
+[decisions.md](decisions.md#what-the-v3-run-found-on-twice-the-evidence).
 
-Still open: whether `EFFORT` should go from `low` to `medium`. Nothing in the
-first run suggests it — no case needed a second attempt.
+Nothing else failed. None of the invented-world rules fired and no case needed a
+second attempt, in either world — the structural half of layer 2b is solid and it
+is the reading-level numbers that are wrong.
+
+Still open: whether `EFFORT` should go from `low` to `medium`. Two runs now say no
+— zero regenerations across 24 generations, including four that had to invent a
+world from scratch.
 
 ## More worlds
 

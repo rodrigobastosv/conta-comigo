@@ -334,6 +334,38 @@ sentence", the prompt says *"Frases de 8 a 14 palavras"* — every sentence. The
 evaluation measures the average, following this document, because prose wins. If
 the intent is per-sentence, say so here first.
 
+### What the v3 run found, on twice the evidence
+
+`v3` scores **5/14**, and every single failure is still the two rules above —
+eight `mean-sentence-words`, six `choice-label-words`. Nothing else failed at all.
+
+The `ouvir` sentence length is now measured across **two worlds**, one of which
+nobody wrote by hand, and the answer does not move: ten `ouvir` scenes averaged
+**7.6 words per sentence**, none reached 9, against a floor of 8. A rule that a
+model misses in ten out of ten scenes, in two different worlds, is not a rule the
+model is failing — it is a rule that describes something other than the product.
+Same for the choice labels: **every** one of the six failures was a label of
+exactly five words against a ceiling of four.
+
+The obvious fix is to move the numbers to what is actually being produced — floor
+6 for `ouvir` sentences, ceiling 5 for `ouvir` labels — but that is a prose
+decision about what a five-year-old wants to hear, so it starts in
+[story-bible.md](story-bible.md) and not here. **Do not "fix" it by editing
+[lib/eval/rules.ts](../lib/eval/rules.ts)**: the numbers there are a transcription
+of the prompt, and changing one side alone means measuring a rule the model was
+never given.
+
+What the run settled, and it is the reason the invented world shipped: **not one
+of the new rules fired.** No beat 1 failed to declare its world, no later beat
+rewrote one, no refrain was declared and left unspoken, no cliché appeared — not
+even in `original-abertura-sem-semente`, the `ler` opening with no seed at all,
+which exists precisely because it is where a model reaches for a dragon. No case
+needed a second attempt, in either world.
+
+One thing the rules do not catch and a person should watch: both invented
+openings used the helper's name for an **adult character**. It breaks nothing
+today, and it would read badly the day a child uses her own name.
+
 ### The rules are a transcription, not an opinion
 
 [lib/eval/rules.ts](../lib/eval/rules.ts) restates the numbers from

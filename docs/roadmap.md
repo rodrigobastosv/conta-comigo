@@ -88,13 +88,19 @@ and the authentication are missing.
 
 ## Evaluation set
 
-Ten fixed openings, run on every prompt change, measuring the numeric
-reading-level rules: words per scene, words per sentence, and presence of the
-refrain. Plus a check against the constitution's limits.
+Done: `npm run eval` runs ten fixed openings against the real model and measures
+words per scene, mean words per sentence, the refrain, the choice-label lengths
+and a short list of constitution breaches. Baseline in
+[lib/eval/baseline.json](../lib/eval/baseline.json).
 
-It is what allows changing the prompt without discovering the regression from a
-child's mouth. It is also what decides whether `EFFORT` should go from `low` to
-`medium`.
+Missing: acting on what it found. `v2` scores 4/10 — the `ouvir` sentence floor
+of 8 words is not what the model produces and probably not what a five-year-old
+wants. That is a prose change, so it starts in
+[story-bible.md](story-bible.md). See
+[decisions.md](decisions.md#what-the-first-run-found).
+
+Still open: whether `EFFORT` should go from `low` to `medium`. Nothing in the
+first run suggests it — no case needed a second attempt.
 
 ## More worlds
 

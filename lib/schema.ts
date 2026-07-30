@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { FINAL_BEAT, type Beat, type Scene } from "@/lib/types";
+// Relative, with the extension: `npm test` runs this through node's strip-only
+// type stripping, which does not resolve the `@/` tsconfig alias.
+import { FINAL_BEAT, type Beat, type Scene } from "./types.ts";
 
 /**
  * Output contract of the model. Never trust the JSON that comes back: it will
@@ -24,9 +26,15 @@ export const sceneSchema = z.strictObject({
 export type RawScene = z.infer<typeof sceneSchema>;
 
 export class SceneInvalidError extends Error {
-  constructor(readonly reason: string) {
+  // Assigned in the body rather than declared as a constructor parameter
+  // property: `npm test` runs this through node's strip-only type stripping,
+  // which rejects `constructor(readonly x: T)` outright.
+  readonly reason: string;
+
+  constructor(reason: string) {
     super(`invalid scene: ${reason}`);
     this.name = "SceneInvalidError";
+    this.reason = reason;
   }
 }
 

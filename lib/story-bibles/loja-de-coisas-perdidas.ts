@@ -1,4 +1,4 @@
-import type { Beat } from "@/lib/types";
+import type { Beat } from "../types.ts";
 
 /**
  * The filename mirrors `id`, which is what goes into `stories.bible_id`. Keep it

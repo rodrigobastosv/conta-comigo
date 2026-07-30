@@ -1,10 +1,10 @@
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { anthropic, EFFORT, MAX_TOKENS, MODEL } from "@/lib/anthropic";
-import { CONSTITUTION, buildRequest, PROMPT_VERSION } from "@/lib/prompts/v1";
-import { sceneSchema, validateScene } from "@/lib/schema";
-import { LOST_THINGS_SHOP } from "@/lib/story-bibles/loja-de-coisas-perdidas";
-import { FieldReader, Sentences } from "@/lib/stream-json";
-import type { Scene, SceneRequest } from "@/lib/types";
+import { anthropic, EFFORT, MAX_TOKENS, MODEL } from "./anthropic.ts";
+import { CONSTITUTION, buildRequest, PROMPT_VERSION } from "./prompts/v1.ts";
+import { sceneSchema, validateScene } from "./schema.ts";
+import { LOST_THINGS_SHOP } from "./story-bibles/loja-de-coisas-perdidas.ts";
+import { FieldReader, Sentences } from "./stream-json.ts";
+import type { Scene, SceneRequest } from "./types.ts";
 
 export { PROMPT_VERSION };
 
@@ -95,7 +95,10 @@ export async function* generateScene(
       return;
     }
 
-    yield { type: "scene", scene: validateScene(JSON.parse(raw), request.beat) };
+    yield {
+      type: "scene",
+      scene: validateScene(JSON.parse(raw), request.beat),
+    };
   } catch (error) {
     // The detail stays in the server log; the client only gets a code.
     console.error("[generateScene]", error);

@@ -145,7 +145,9 @@ for (const voice of candidates) {
         String(sentence.split(/\s+/).length).padStart(5),
         percentile(samples, 0.5).toFixed(0).padStart(7),
         percentile(samples, 0.95).toFixed(0).padStart(7),
-        Math.max(...samples).toFixed(0).padStart(6),
+        Math.max(...samples)
+          .toFixed(0)
+          .padStart(6),
       ].join(" "),
     );
   }

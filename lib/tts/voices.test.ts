@@ -88,6 +88,10 @@ describe("availableVoices", () => {
   it("hides voices whose provider has no credentials here", () => {
     const ids = availableVoices(new Set(["google"])).map((v) => v.id);
     assert.deepEqual(ids, ["dispositivo", "vitoria", "contador"]);
-    assert.ok(!availableVoices(new Set(["elevenlabs"])).some((v) => v.provider === "google"));
+    assert.ok(
+      !availableVoices(new Set(["elevenlabs"])).some(
+        (v) => v.provider === "google",
+      ),
+    );
   });
 });

@@ -1,0 +1,20 @@
+.next
+node_modules
+package-lock.json
+tsconfig.tsbuildinfo
+
+# `npm run eval` writes here. Already in .gitignore, which prettier does not read
+# — without this line, every developer who runs the evaluation fails
+# `format:check` on their own untracked artifacts.
+eval-reports
+
+# Markdown is left alone on purpose. The docs are hand-wrapped at 80 columns and
+# read as prose; letting a formatter reflow them produces enormous diffs that
+# bury the one sentence that actually changed.
+*.md
+
+# Note on the narrator's prose in lib/prompts/ and lib/story-bibles/: it is NOT
+# ignored, because prettier does not touch the inside of a template literal —
+# verified before this file was written. If you ever add a plugin that does,
+# ignore those two directories, because re-wrapping that text changes what the
+# model reads and what a child hears.

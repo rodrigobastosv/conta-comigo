@@ -32,12 +32,14 @@ enough.
 Before opening a PR:
 
 ```bash
-npm test          # tests for the streaming JSON reader
+npm test          # unit tests
 npm run typecheck
+npm run lint
+npm run format:check
 npm run build
 ```
 
-All three run in CI. The `build` does not need an API key.
+All of them run in CI. The `build` does not need an API key.
 
 ## The rule that matters most
 
@@ -91,8 +93,9 @@ that side of the line too: they are in the prompt and in the database constraint
 A comment explains **why**, not what. The repository's pattern is a comment that
 records the decision and what happens if you undo it — copy that tone.
 
-No prettier/eslint configured at the moment. Follow the formatting of neighbouring
-files: 2 spaces, double quotes, semicolons.
+Formatting is prettier's job and linting is eslint's — `npm run format` fixes
+the first, `npm run lint` reports the second, and CI runs both. Do not argue with
+either in review; if a rule is wrong, change the rule.
 
 ## Generated content
 

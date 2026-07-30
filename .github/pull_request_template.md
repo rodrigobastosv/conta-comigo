@@ -8,7 +8,7 @@
 
 ## Checklist
 
-- [ ] `npm test && npm run typecheck && npm run build` pass
+- [ ] `npm test && npm run typecheck && npm run lint && npm run format:check && npm run build` pass
 - [ ] If I changed the narrator's behaviour: I updated `docs/story-bible.md` **before** the prompt
 - [ ] If I changed the constitution or the level rules: I raised `PROMPT_VERSION`
 - [ ] If I changed streaming parsing: I added a test in `lib/stream-json.test.ts`

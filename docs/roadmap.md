@@ -122,8 +122,6 @@ than it looks.
 
 - **Generation ceiling in memory.** Only correct with one instance. See
   [decisions.md](decisions.md#the-generation-ceiling-is-on-the-server).
-- **No linter.** Neither eslint nor prettier configured; CI runs `typecheck`,
-  `test` and `build`.
 - **The route's own file is untested.** `lib/scene-route.ts` carries the logic and
   is covered; `app/api/scene/route.ts` is four lines of Next wiring on top of it
   and is not.

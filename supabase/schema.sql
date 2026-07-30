@@ -48,9 +48,9 @@ create table scenes (
   choices         jsonb not null default '[]'::jsonb,
   -- Label of the choice that led here. Null on the root scene.
   entry_choice    text,
-  -- Narration audio, in Storage. Cached by hash of (text + voice + model).
-  audio_url       text,
-  audio_hash      text,
+  -- No audio columns, deliberately: the narration is re-synthesized on every
+  -- listen and never stored. The text IS the archive. See
+  -- docs/decisions.md#the-narration-is-not-stored-anywhere.
   prompt_version  text not null,
   created_at      timestamptz not null default now()
 );

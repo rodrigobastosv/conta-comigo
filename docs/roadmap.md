@@ -20,9 +20,10 @@ Ready:
 - `AudioContext` already unlocked on the user gesture
   ([lib/audio.ts](../lib/audio.ts)), with `audioContext()` exported for the queue
   to use.
-- `scenes.audio_url` and `scenes.audio_hash` columns in the schema, for caching by
-  hash of (text + voice + model).
 - `profiles.preferred_voice`.
+- The decision **not** to store audio: every listen re-synthesizes, and the schema
+  has no audio columns. See
+  [decisions.md](decisions.md#the-narration-is-not-stored-anywhere).
 - The providers are chosen, in three tiers: the device's own voice for free,
   Google Chirp3-HD inside a free monthly quota, ElevenLabs when it is worth
   paying. See

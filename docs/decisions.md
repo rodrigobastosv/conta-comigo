@@ -94,21 +94,24 @@ Cartesia Sonic 3 remains the runner-up on the paid rung: cheaper than ElevenLabs
 and explicitly Brazil-targeted. **Switch if** the bill becomes the binding
 constraint, or if pt-BR pronunciation complaints show up in real scenes.
 
-### Licensing is what actually constrains the cache
+### Licensing, now that nothing is stored
 
-The archive re-reads stored audio, so the right to keep the file matters more
-here than the price of making it.
+Since the narration is never kept (see below), the only right we need is the right
+to generate audio and play it to the family that asked for it. All three tiers
+grant that plainly.
 
-- **ElevenLabs paid plans**: explicit. Output rights are retained and the audio can
-  be used indefinitely, so storing it and re-serving it by `audio_hash` is fine.
-  On the **free** tier it is not — no commercial licence. That is why the free
-  ElevenLabs tier is not one of the three rungs above.
-- **Google**: generating audio per request for one end user is covered; Google's
-  own guidance draws a line at "rebundling as a media library". A per-family
-  archive of stories that family generated sits on the right side of that line as
-  read here, but it is close enough that it is worth a lawyer's glance before
-  relying on it at scale rather than a confident assumption in a code comment.
-- **The device voice** raises none of this: the audio never exists as a file.
+What went away with the cache: Google's guidance covers per-request generation for
+one end user but draws a line at "rebundling as a media library", and a stored
+per-family archive sat close enough to that line to need a lawyer. Not storing is
+the cheapest possible answer to that question.
+
+**The ElevenLabs free tier is not a fourth rung, and storage is not the reason.**
+It is restricted to personal, non-commercial use and requires attribution when
+you publish — neither of which is unlocked by keeping no files. But the binding
+constraint is arithmetic: 10,000 credits a month is about 10 minutes of audio, an
+`ouvir` scene read slowly runs about a minute, so a five-scene story is ~5 minutes.
+That is **roughly two stories a month**, against Google's ~285. It is fine for
+trying a voice out; it is not a tier anyone can read bedtime stories on.
 
 ### The numbers above are vendor claims
 
@@ -116,6 +119,48 @@ Nobody has had an account on any of them yet, so nothing here is measured.
 [scripts/bench-tts.ts](../scripts/bench-tts.ts) measures time to first playable
 audio for whichever providers are configured, from where the users are, on real
 sentences. Run it and paste the table here. Vendor marketing is not evidence.
+
+## The narration is not stored anywhere
+
+Every listen re-synthesizes. There is no audio file, no Storage bucket, no
+`audio_url`, no `audio_hash` — the schema deliberately has no audio columns.
+**The text is the archive.**
+
+The original design cached audio keyed by a hash of (text + voice + model). The
+arithmetic did not support it:
+
+| Tier | Cost of one full re-listen (~3.5k chars) | What a cache saves |
+| --- | --- | --- |
+| Device voice (the default) | nothing | nothing — there is no file to store |
+| Google, inside the free quota | nothing | nothing, until ~285 listens/month |
+| ElevenLabs paid | ~$0.18 | ~$0.18, per repeat of the same scene in the same voice |
+
+So a cache pays only on a metered provider, only for a repeat listen, and only
+while the voice is unchanged — change the voice and it was invalid anyway.
+
+**And dropping it costs no latency at all**, which is what settles it. Synthesis is
+per sentence, so a re-listen pays exactly what the first listen paid, and the first
+listen already has to meet the 1–2 s budget. Re-synthesizing is not a degraded
+experience; it is an identical one.
+
+What not storing buys, beyond the machinery it deletes:
+
+- **Less of a child's data at rest.** Audio of a child's stories is more personal
+  data to secure, to cover with RLS, and to erase when an account is deleted.
+- **The Google licensing question disappears.** Nothing stored, nothing to argue
+  about.
+- **A schema mismatch dissolves.** `audio_url`/`audio_hash` were per *scene* while
+  synthesis is per *sentence*; caching properly needed a related table.
+
+**Bring it back when** we are on a metered provider *and* measurement shows repeat
+listens of the same scene in the same voice are common. Both halves matter, and
+both are measurable — do not re-add this on a hunch. Adding a nullable column
+later is a trivial migration; the cost of guessing wrong now is a Storage bucket
+full of children's voices we never needed.
+
+The one real thing lost: a stored file would preserve the exact reading a child
+heard, which is a keepsake argument for a product built on re-reading. If that is
+what someone wants later, it is a feature ("save this story"), not a cache.
 
 ### One consequence worth seeing early
 

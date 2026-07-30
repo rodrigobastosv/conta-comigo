@@ -3,9 +3,12 @@
  * paying — this month.
  *
  * Nothing outside `lib/tts/` should name a provider. A voice is identified by OUR
- * id everywhere else — in `profiles.preferred_voice`, in the audio cache hash, in
- * the parent-facing picker — so switching providers, or re-casting one voice onto
- * a different provider, does not orphan a single stored row.
+ * id everywhere else — in `profiles.preferred_voice`, in the parent-facing picker
+ * — so switching providers, or re-casting one voice onto a different provider,
+ * does not orphan a single stored row.
+ *
+ * No audio is ever stored: every listen re-synthesizes. See
+ * docs/decisions.md#the-narration-is-not-stored-anywhere.
  */
 
 export type ProviderName = "device" | "google" | "elevenlabs";
@@ -15,10 +18,9 @@ export type ProviderName = "device" | "google" | "elevenlabs";
  * cares about:
  *
  * - `device` — the browser's own `speechSynthesis`. Costs nothing, needs no
- *   account, works offline, and never touches the server. There is no audio file,
- *   so there is nothing to cache and nothing to store.
- * - `server` — a synthesis API behind our route. Produces an audio file we can
- *   cache by `audio_hash` and re-serve for free on every re-read.
+ *   account, works offline, and never touches the server.
+ * - `server` — a synthesis API behind our route, which streams the audio straight
+ *   through to the client and keeps none of it.
  *
  * The playback queue (issue #13) branches on this once. The audio route (issue
  * #12) only ever exists for `server`.
@@ -51,8 +53,8 @@ export type VoiceSettings = {
 
 export type Voice = {
   /**
-   * OUR id, stored in `profiles.preferred_voice` and mixed into the audio cache
-   * hash. Stable forever: never rename one, and never re-cast one onto a
+   * OUR id, stored in `profiles.preferred_voice`.
+   * Stable forever: never rename one, and never re-cast one onto a
    * different-sounding voice without meaning to. Both mistakes are silent — the
    * parent picked "Dona Vitória" and one day a stranger reads the bedtime story.
    */

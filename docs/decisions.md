@@ -35,16 +35,27 @@ between paying for the bible's text once per story and paying for it five times.
 This is the real reason for the split between layers 1/2 and layer 3. It is not
 file organisation, it is cache economics.
 
-## The `sentence` events already exist, the narration does not
+## The narration unit is the sentence, not the scene
 
 Every complete sentence is emitted the moment it closes, in
-[lib/generate-scene.ts](../lib/generate-scene.ts). It is the unit the TTS will
-receive to play in a queue while the rest of the scene is still being generated:
-first sound in 1–2 s instead of 8.
+[lib/generate-scene.ts](../lib/generate-scene.ts), and
+[lib/tts/queue.ts](../lib/tts/queue.ts) speaks it while the rest of the scene is
+still being written. Measured in a real browser: **the first sentence starts
+speaking 6.4 seconds before the scene finishes generating.**
 
-The event's handler in the client is an empty block today, on purpose. The
-alternative was generating the whole scene's audio once it was finished, and then
-the child faces eight seconds of silence.
+The alternative was synthesizing the scene's audio once it was complete, and then
+the child faces those 6.4 seconds as silence. That is the entire reason the event
+is per sentence, and it is why the queue serialises playback itself instead of
+waiting for a scene to be whole.
+
+The queue's two jobs are both invisible when they work:
+
+- **Order.** A sentence waits for its predecessor even if its own audio is ready
+  first — which the server tier will cause constantly once it fetches in
+  parallel.
+- **Silence on demand.** Choosing an option stops the voice in the same tick. A
+  leftover sentence narrating over the next scene is the most jarring thing this
+  feature can do.
 
 ## Narration starts free on the device, and buys quality later
 
@@ -193,16 +204,35 @@ narrator never refers to herself — that is a limit in
 [story-bible.md](story-bible.md) — so nothing the child hears is gendered, and the
 word only ever addresses the model.
 
-## The `AudioContext` is unlocked before there is any audio
+## Both audio permissions are taken on the one gesture there is
 
-[lib/audio.ts](../lib/audio.ts) creates and calls `resume()` on the `AudioContext`
-when "Começar a história" is tapped, and nothing consumes that context today.
+On iOS, audio only plays after a user gesture, and `speechSynthesis` and the
+`AudioContext` ask for that permission **separately**. The gesture exists exactly
+once per session — the "Começar a história" tap — so
+[lib/audio.ts](../lib/audio.ts) spends it on both: it resumes an `AudioContext`
+and speaks an empty utterance at zero volume.
 
-On iOS, audio only plays after a user gesture. If you find that out when the
-narration lands, the symptom is the first scene coming out silent on the iPad and
-nowhere else — the worst kind of bug to diagnose after the fact. The right gesture
-exists exactly once per session and it is that button; spending 20 lines now is
-cheaper than rediscovering this later.
+The child hears nothing from either. What they buy is that the iPad talks at all.
+Miss this and the symptom is the first scene coming out silent on iOS and nowhere
+else, with no error anywhere — iOS does not reject a `speak()` made outside a
+gesture, it ignores it.
+
+The `AudioContext` half still has no consumer: the device voice does not need it.
+It is there for the server tier (issue #12), which will play real audio files.
+Leave it.
+
+## A cartoon voice is not a bedtime voice
+
+[lib/tts/speaker.ts](../lib/tts/speaker.ts) does not take the first pt-BR voice
+the device offers. On macOS that is **Eddy**, one of Apple's novelty voices, and
+the natural one — **Luciana** — is eight entries further down the list. Apple
+ships that same joke set in every language, so this is not a macOS quirk to shrug
+at.
+
+The picker prefers a small list of known-good narrators per platform, then any
+plain voice, and only then a novelty one — because a cartoon voice is still
+better than no story. `pickDeviceVoice` is a pure function with the real macOS
+voice list as its test fixture, so this stays fixed.
 
 ## The reading-level rules are numeric on purpose
 

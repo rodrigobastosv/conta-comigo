@@ -32,14 +32,20 @@ Ready:
   a voice is adding an entry, and re-casting one onto another provider does not
   orphan a stored profile.
 
-Missing: the playback queue in the client — the `sentence` event handler in
-[components/story.tsx](../components/story.tsx) is an empty block today — and,
-for the server tiers only, the route that generates audio per sentence.
+- The playback queue itself ([lib/tts/queue.ts](../lib/tts/queue.ts)), wired into
+  [components/story.tsx](../components/story.tsx): sentences are spoken in order
+  as they arrive, the voice stops the moment a choice is tapped, the sentence
+  being read is highlighted, and there are pause and "de novo" controls.
 
-**The device tier needs no account, so the playback queue can be built and shipped
-before anyone signs up for anything.** That is the reason it is the default. The
-server tiers additionally need a key, and `npm run tts:bench` to turn the vendors'
-published latency into a measured one.
+**Narration works today, on the device voice, with no account and no key.**
+Measured in a real browser: the first sentence starts speaking 6.4 s before the
+scene finishes generating.
+
+Missing: the route that synthesizes per sentence for the **server** tiers only
+(issue #12), and a key for one of them — plus `npm run tts:bench` to turn the
+vendors' published latency into a measured one. Also missing: a voice picker in
+the UI, so a family can choose between Dona Vitória and o contador rather than
+always getting the device voice.
 
 The project constraint: **first sound in 1–2 s**, playing sentence 1 while
 sentence 3 is still being generated. Generating the whole scene's audio once it is

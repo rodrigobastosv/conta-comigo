@@ -1,12 +1,12 @@
 /**
- * No iOS o áudio só toca depois de um gesto do usuário. Se você só descobrir isso
- * quando a narração entrar, a primeira cena vai sair muda no iPad e em nenhum outro
- * lugar. O botão "Começar a história" chama isto e o problema deixa de existir.
+ * On iOS, audio only plays after a user gesture. If you find that out only when
+ * narration lands, the first scene comes out silent on the iPad and nowhere else.
+ * The "Começar a história" button calls this and the problem stops existing.
  */
-let contexto: AudioContext | null = null;
+let context: AudioContext | null = null;
 
-export function desbloquearAudio(): void {
-  if (contexto) return;
+export function unlockAudio(): void {
+  if (context) return;
 
   const Ctor =
     window.AudioContext ??
@@ -14,10 +14,10 @@ export function desbloquearAudio(): void {
       .webkitAudioContext;
   if (!Ctor) return;
 
-  contexto = new Ctor();
-  void contexto.resume();
+  context = new Ctor();
+  void context.resume();
 }
 
-export function contextoDeAudio(): AudioContext | null {
-  return contexto;
+export function audioContext(): AudioContext | null {
+  return context;
 }

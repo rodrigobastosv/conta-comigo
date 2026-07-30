@@ -1,17 +1,24 @@
-import { BATIDA_FINAL, type NivelLeitura, type PedidoDeCena } from "@/lib/tipos";
+import { FINAL_BEAT, type ReadingLevel, type SceneRequest } from "@/lib/types";
 
 /**
- * Versão do prompt. Suba isto sempre que a constituição ou as regras de nível
- * mudarem — fica salvo em cada cena, então dá para saber com que regras cada
- * pedaço do acervo foi gerado.
+ * Prompt version. Raise this whenever the constitution or the level rules change
+ * — it is stored on every scene, so you can tell which rules each part of the
+ * archive was generated under.
+ *
+ * v2: the output field names went from Portuguese to English
+ * (texto → text, fatos_novos → new_facts, escolhas → choices, rotulo → label,
+ * icone → icon). The prose the narrator reads did not change.
  */
-export const PROMPT_VERSAO = "v1";
+export const PROMPT_VERSION = "v2";
 
 /**
- * Camada 1 do story bible: vale para todas as histórias, para sempre.
- * Fonte de verdade em prosa: docs/story-bible.md.
+ * Layer 1 of the story bible: applies to every story, forever.
+ *
+ * The prose stays in pt-BR on purpose — this is the text the model reads, and the
+ * narrator speaks pt-BR to a Brazilian child. Translating it would change the
+ * product, not the code. Source of truth in prose: docs/story-bible.md.
  */
-export const CONSTITUICAO = `Você é a NARRADORA de um livro infantil interativo.
+export const CONSTITUTION = `Você é a NARRADORA de um livro infantil interativo.
 
 Você não é amiga, não é assistente, não é personagem que conversa com a criança.
 Nunca se refira a si mesma. Nunca faça perguntas sobre a vida real da criança.
@@ -40,18 +47,18 @@ As duas opções levam a lugares igualmente interessantes. Se uma delas é
 claramente a melhor, não é uma escolha, é um teste — e criança sente isso na hora.
 
 CONTRATO DE SAÍDA
-- "texto": só a narração da cena. Sem título, sem cabeçalho, sem aspas em volta,
+- "text": só a narração da cena. Sem título, sem cabeçalho, sem aspas em volta,
   sem listar as escolhas dentro do texto.
-- "fatos_novos": os fatos concretos que ESTA cena tornou verdade e que as cenas
+- "new_facts": os fatos concretos que ESTA cena tornou verdade e que as cenas
   seguintes não podem contradizer (nomes, cores, quem é o dono, o que aconteceu).
   De 0 a 6 itens, cada um uma frase curta em minúsculas. Não repita fatos que já
   foram estabelecidos.
-- "escolhas": exatamente 2 opções — exceto na batida ${BATIDA_FINAL}, onde é uma
-  lista vazia. "icone" é um único emoji que representa a opção de forma
+- "choices": exatamente 2 opções — exceto na batida ${FINAL_BEAT}, onde é uma
+  lista vazia. "icon" é um único emoji que representa a opção de forma
   visualizável (a criança de 5 anos escolhe pelo desenho, não pelo texto).
 - Os fatos já estabelecidos são verdade. Nunca os contradiga. Construa em cima deles.`;
 
-const NIVEL: Record<NivelLeitura, string> = {
+const LEVEL: Record<ReadingLevel, string> = {
   ouvir: `MODO OUVIR (criança de ~5 anos) — o texto existe para ser ouvido em voz alta.
 - 90 a 140 palavras nesta cena.
 - Frases de 8 a 14 palavras. Uma ideia por frase.
@@ -69,59 +76,59 @@ const NIVEL: Record<NivelLeitura, string> = {
   é a "certa". É isso que faz querer jogar de novo.`,
 };
 
-export function instrucoesDeNivel(nivel: NivelLeitura): string {
-  return NIVEL[nivel];
+export function levelInstructions(level: ReadingLevel): string {
+  return LEVEL[level];
 }
 
 /**
- * Monta a parte volátil do prompt (camada 3 + parâmetros da vez).
- * Vai na mensagem do usuário, DEPOIS do bloco em cache — trocar o beat ou os
- * fatos não deve invalidar o cache da constituição e da bíblia.
+ * Assembles the volatile part of the prompt (layer 3 + this call's parameters).
+ * Goes in the user message, AFTER the cached block — changing the beat or the
+ * facts must not invalidate the cache of the constitution and the bible.
  */
-export function montarPedido(
-  pedido: PedidoDeCena,
-  instrucaoDaBatida: string,
+export function buildRequest(
+  request: SceneRequest,
+  beatInstruction: string,
 ): string {
-  const partes: string[] = [];
+  const parts: string[] = [];
 
-  partes.push(`Nome do ajudante nesta história: ${pedido.nomeAjudante}`);
-  partes.push("");
-  partes.push(instrucoesDeNivel(pedido.nivelLeitura));
+  parts.push(`Nome do ajudante nesta história: ${request.helperName}`);
+  parts.push("");
+  parts.push(levelInstructions(request.readingLevel));
 
-  if (pedido.restricoesExtra?.length) {
-    partes.push("");
-    partes.push(
-      `RESTRIÇÕES ADICIONAIS DESTA FAMÍLIA (obedeça sem mencionar):\n${pedido.restricoesExtra
+  if (request.extraRestrictions?.length) {
+    parts.push("");
+    parts.push(
+      `RESTRIÇÕES ADICIONAIS DESTA FAMÍLIA (obedeça sem mencionar):\n${request.extraRestrictions
         .map((r) => `- ${r}`)
         .join("\n")}`,
     );
   }
 
-  partes.push("");
-  if (pedido.fatos.length === 0) {
-    partes.push("FATOS JÁ ESTABELECIDOS: nenhum ainda, esta é a primeira cena.");
+  parts.push("");
+  if (request.facts.length === 0) {
+    parts.push("FATOS JÁ ESTABELECIDOS: nenhum ainda, esta é a primeira cena.");
   } else {
-    partes.push(
-      `FATOS JÁ ESTABELECIDOS (são verdade, nunca contradiga):\n${pedido.fatos
+    parts.push(
+      `FATOS JÁ ESTABELECIDOS (são verdade, nunca contradiga):\n${request.facts
         .map((f) => `- ${f}`)
         .join("\n")}`,
     );
   }
 
-  partes.push("");
-  if (pedido.escolhaFeita) {
-    partes.push(`A criança escolheu: "${pedido.escolhaFeita}".`);
+  parts.push("");
+  if (request.choiceMade) {
+    parts.push(`A criança escolheu: "${request.choiceMade}".`);
   }
-  partes.push(`BATIDA ${pedido.batida} de ${BATIDA_FINAL} — ${instrucaoDaBatida}`);
+  parts.push(`BATIDA ${request.beat} de ${FINAL_BEAT} — ${beatInstruction}`);
 
-  if (pedido.batida === BATIDA_FINAL) {
-    partes.push(
-      'Esta é a última cena. Feche a história e devolva "escolhas" como lista vazia.',
+  if (request.beat === FINAL_BEAT) {
+    parts.push(
+      'Esta é a última cena. Feche a história e devolva "choices" como lista vazia.',
     );
   }
 
-  partes.push("");
-  partes.push("Escreva a cena.");
+  parts.push("");
+  parts.push("Escreva a cena.");
 
-  return partes.join("\n");
+  return parts.join("\n");
 }

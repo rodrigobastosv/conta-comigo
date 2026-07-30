@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-papel: #fdf6e8;
-  --color-tinta: #2c2418;
-  --color-loja: #b5541f;
+  --color-paper: #fdf6e8;
+  --color-ink: #2c2418;
+  --color-shop: #b5541f;
+  /* Named after the dog, not after the colour — Farelo is a character. */
   --color-farelo: #d9a95c;
-  --font-conto: Georgia, "Times New Roman", serif;
+  --font-tale: Georgia, "Times New Roman", serif;
 }
 
 html,
 body {
-  background: var(--color-papel);
-  color: var(--color-tinta);
-  font-family: var(--font-conto);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-tale);
   -webkit-text-size-adjust: 100%;
 }

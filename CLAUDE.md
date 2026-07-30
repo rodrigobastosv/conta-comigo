@@ -1,60 +1,73 @@
-# Contexto para agentes de código
+# Context for coding agents
 
-Leia [docs/README.md](docs/README.md) antes de mudar qualquer coisa. Este arquivo
-é só o resumo do que costuma ser esquecido.
+Read [docs/README.md](docs/README.md) before changing anything. This file is only
+the summary of what tends to get forgotten.
 
-## Hierarquia de verdade
+## Hierarchy of truth
 
-**prosa → prompt → código.** [docs/story-bible.md](docs/story-bible.md) manda em
-[lib/prompts/v1.ts](lib/prompts/v1.ts), que manda no resto.
+**prose → prompt → code.** [docs/story-bible.md](docs/story-bible.md) governs
+[lib/prompts/v1.ts](lib/prompts/v1.ts), which governs everything else.
 
-Mudança de comportamento da narradora **começa no story bible**, não no prompt. Se
-você editar só o prompt, o documento vira ficção e a próxima pessoa não tem como
-saber qual dos dois está certo.
+A change in the narrator's behaviour **starts in the story bible**, not in the
+prompt. If you edit only the prompt, the document becomes fiction and the next
+person has no way to tell which of the two is right.
 
-Ao mudar a constituição ou as regras de nível de leitura, suba `PROMPT_VERSAO`.
+When changing the constitution or the reading-level rules, raise `PROMPT_VERSION`.
 
-## Idioma
+## Language
 
-Identificadores, comentários, documentação, mensagens de commit: **português**.
-`gerarCena`, `LeitorDeCampo`, `batida`, `fatos_novos`. Um `generateScene` no meio
-faz o leitor trocar de idioma a cada arquivo.
+Identifiers, comments, documentation, commit messages: **English**.
+`generateScene`, `FieldReader`, `beat`, `new_facts`. A `gerarCena` in the middle
+makes the reader switch languages every file.
 
-Comentário explica **por que**, não o que — e registra o que acontece se alguém
-desfizer a decisão. Esse é o tom do repositório; copie ele.
+**The narrator's prose stays in pt-BR** — do not "helpfully" translate it:
 
-## Coisas que parecem bug e não são
+- `CONSTITUTION` and the reading-level rules in [lib/prompts/v1.ts](lib/prompts/v1.ts)
+- the bibles in [lib/story-bibles/](lib/story-bibles/) (`text`, `beats`, `title`, `refrain`)
+- [docs/story-bible.md](docs/story-bible.md)
+- the UI strings in [components/story.tsx](components/story.tsx)
+- the `ReadingLevel` values `'ouvir' | 'ler'`, which are in the prompt and in the
+  database constraint
 
-Antes de "corrigir" qualquer um destes, leia
-[docs/decisoes.md](docs/decisoes.md):
+That text is what a Brazilian child reads and hears. Translating it changes the
+product; translating the code only changes how it reads.
 
-- `texto` é o primeiro campo de `cenaSchema` **de propósito** — o leitor de
-  streaming extrai esse campo do JSON parcial.
-- O handler do evento `frase` em [components/historia.tsx](components/historia.tsx)
-  é um bloco vazio **de propósito** — é o gancho do TTS, que ainda não existe.
-- [lib/audio.ts](lib/audio.ts) cria um `AudioContext` que ninguém consome **de
-  propósito** — desbloqueio do iOS precisa acontecer num gesto do usuário.
-- A batida 5 devolve `escolhas: []`. É o sinal de fim de história; não existe campo
-  `terminou`.
-- Não há eslint nem prettier. Siga a formatação dos arquivos vizinhos.
+A comment explains **why**, not what — and records what happens if someone undoes
+the decision. That is the repository's tone; copy it.
 
-## Invariantes que não podem ser quebradas
+## Things that look like bugs and are not
 
-- **Nada volátil no `system`.** Batida, nível, fatos e escolha vão na mensagem do
-  usuário, depois do `cache_control`. Interpolar no `system` invalida o prefixo
-  inteiro em toda chamada.
-- **A chave da API nunca vai ao browser.** Só código de servidor importa
-  [lib/anthropic.ts](lib/anthropic.ts). Nunca prefixe com `NEXT_PUBLIC_`.
-- **Limites de custo e conteúdo ficam no servidor.** O front é inspecionável.
-- **Erro para o cliente é código**, não stack trace nem mensagem do provedor.
-- **Nada que atrase o primeiro token.** É o requisito de produto mais forte que
-  existe aqui.
+Before "fixing" any of these, read [docs/decisions.md](docs/decisions.md):
 
-## Verificar antes de terminar
+- `text` is the first field of `sceneSchema` **on purpose** — the streaming reader
+  extracts that field from the partial JSON.
+- The `sentence` event handler in [components/story.tsx](components/story.tsx) is
+  an empty block **on purpose** — it is the TTS hook, which does not exist yet.
+- [lib/audio.ts](lib/audio.ts) creates an `AudioContext` nobody consumes **on
+  purpose** — the iOS unlock has to happen inside a user gesture.
+- Beat 5 returns `choices: []`. It is the end-of-story signal; there is no
+  `finished` field.
+- The filename of a story bible mirrors its `id`, which is what goes into
+  `stories.bible_id`. That is why `loja-de-coisas-perdidas.ts` keeps a pt-BR name.
+- There is no eslint or prettier. Follow the formatting of neighbouring files.
+
+## Invariants that cannot be broken
+
+- **Nothing volatile in the `system`.** Beat, level, facts and choice go in the
+  user message, after the `cache_control`. Interpolating into the `system`
+  invalidates the entire prefix on every call.
+- **The API key never reaches the browser.** Only server code imports
+  [lib/anthropic.ts](lib/anthropic.ts). Never prefix it with `NEXT_PUBLIC_`.
+- **Cost and content limits live on the server.** The front end is inspectable.
+- **Error to the client is a code**, not a stack trace or the provider's message.
+- **Nothing that delays the first token.** It is the strongest product requirement
+  that exists here.
+
+## Verify before finishing
 
 ```bash
 npm test && npm run typecheck && npm run build
 ```
 
-Mudou parsing de streaming? Adicione teste em
-[lib/stream-json.test.ts](lib/stream-json.test.ts) — bug ali é silencioso.
+Changed streaming parsing? Add a test in
+[lib/stream-json.test.ts](lib/stream-json.test.ts) — a bug there is silent.

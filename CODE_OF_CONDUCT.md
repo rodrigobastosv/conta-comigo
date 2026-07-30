@@ -1,62 +1,62 @@
-# Código de Conduta
+# Code of Conduct
 
-## Nosso compromisso
+## Our pledge
 
-Nós, integrantes, contribuidores e mantenedores, nos comprometemos a fazer da
-participação neste projeto uma experiência livre de assédio para todos,
-independentemente de idade, tamanho corporal, deficiência visível ou invisível,
-etnia, características sexuais, identidade e expressão de gênero, nível de
-experiência, escolaridade, condição socioeconômica, nacionalidade, aparência
-pessoal, raça, religião ou identidade e orientação sexual.
+We as members, contributors, and maintainers pledge to make participation in this
+project a harassment-free experience for everyone, regardless of age, body size,
+visible or invisible disability, ethnicity, sex characteristics, gender identity
+and expression, level of experience, education, socio-economic status,
+nationality, personal appearance, race, religion, or sexual identity and
+orientation.
 
-## Nossos padrões
+## Our standards
 
-Exemplos de comportamento que contribuem para um ambiente positivo:
+Examples of behaviour that contributes to a positive environment:
 
-- Demonstrar empatia e gentileza com outras pessoas
-- Respeitar opiniões, pontos de vista e experiências divergentes
-- Dar e receber feedback construtivo com elegância
-- Assumir responsabilidade, pedir desculpas a quem foi afetado por nossos erros e
-  aprender com a experiência
-- Focar no que é melhor para o projeto e para a comunidade, não apenas para nós
+- Demonstrating empathy and kindness toward other people
+- Being respectful of differing opinions, viewpoints, and experiences
+- Giving and gracefully accepting constructive feedback
+- Accepting responsibility, apologising to those affected by our mistakes, and
+  learning from the experience
+- Focusing on what is best for the project and the community, not just for us
 
-Exemplos de comportamento inaceitável:
+Examples of unacceptable behaviour:
 
-- Linguagem ou imagens sexualizadas, e investidas ou avanços sexuais de qualquer tipo
-- Trollagem, comentários insultuosos ou depreciativos, e ataques pessoais ou políticos
-- Assédio público ou privado
-- Publicar informação privada de outras pessoas, como endereço físico ou
-  eletrônico, sem permissão explícita
-- Qualquer outra conduta que seria razoavelmente considerada inapropriada em um
-  ambiente profissional
+- Sexualised language or imagery, and sexual attention or advances of any kind
+- Trolling, insulting or derogatory comments, and personal or political attacks
+- Public or private harassment
+- Publishing others' private information, such as a physical or email address,
+  without their explicit permission
+- Any other conduct which could reasonably be considered inappropriate in a
+  professional setting
 
-## Responsabilidades de aplicação
+## Enforcement responsibilities
 
-Os mantenedores do projeto são responsáveis por esclarecer e aplicar estes
-padrões, e tomarão medidas corretivas apropriadas e justas em resposta a qualquer
-comportamento que considerem inadequado, ameaçador, ofensivo ou prejudicial.
+Project maintainers are responsible for clarifying and enforcing these standards
+and will take appropriate and fair corrective action in response to any behaviour
+they deem inappropriate, threatening, offensive, or harmful.
 
-Os mantenedores têm o direito e a responsabilidade de remover, editar ou rejeitar
-comentários, commits, código, issues e outras contribuições que não estejam
-alinhadas com este código de conduta, e comunicarão os motivos das decisões de
-moderação quando for apropriado.
+Maintainers have the right and responsibility to remove, edit, or reject comments,
+commits, code, issues, and other contributions that are not aligned with this code
+of conduct, and will communicate the reasons for moderation decisions when
+appropriate.
 
-## Escopo
+## Scope
 
-Este código de conduta se aplica em todos os espaços do projeto e também quando
-alguém estiver representando oficialmente o projeto em espaços públicos.
+This code of conduct applies within all project spaces, and also when someone is
+officially representing the project in public spaces.
 
-## Aplicação
+## Enforcement
 
-Casos de comportamento abusivo, de assédio ou inaceitável podem ser reportados
-aos mantenedores em **rodrigobastosv@gmail.com**. Todas as reclamações serão
-analisadas e investigadas com rapidez e justiça.
+Instances of abusive, harassing, or otherwise unacceptable behaviour may be
+reported to the maintainers at **rodrigobastosv@gmail.com**. All complaints will
+be reviewed and investigated promptly and fairly.
 
-Os mantenedores são obrigados a respeitar a privacidade e a segurança de quem
-reportar qualquer incidente.
+Maintainers are obligated to respect the privacy and security of the reporter of
+any incident.
 
-## Atribuição
+## Attribution
 
-Este Código de Conduta é adaptado do [Contributor Covenant](https://www.contributor-covenant.org),
-versão 2.1, disponível em
+This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org),
+version 2.1, available at
 https://www.contributor-covenant.org/version/2/1/code_of_conduct.html.

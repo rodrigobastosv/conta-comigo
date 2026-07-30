@@ -1,34 +1,35 @@
 /**
- * Leitor de SSE mínimo para o cliente. `EventSource` não serve porque não faz POST.
+ * Minimal SSE reader for the client. `EventSource` is no use here because it
+ * cannot POST.
  */
-export async function* lerSSE(
-  resposta: Response,
-): AsyncGenerator<{ evento: string; dados: unknown }> {
-  if (!resposta.body) throw new Error("resposta sem corpo");
+export async function* readSSE(
+  response: Response,
+): AsyncGenerator<{ event: string; data: unknown }> {
+  if (!response.body) throw new Error("response with no body");
 
-  const leitor = resposta.body.getReader();
-  const decodificador = new TextDecoder();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
   let buffer = "";
 
   while (true) {
-    const { done, value } = await leitor.read();
+    const { done, value } = await reader.read();
     if (done) break;
 
-    buffer += decodificador.decode(value, { stream: true });
+    buffer += decoder.decode(value, { stream: true });
 
-    let corte: number;
-    while ((corte = buffer.indexOf("\n\n")) >= 0) {
-      const bloco = buffer.slice(0, corte);
-      buffer = buffer.slice(corte + 2);
+    let cut: number;
+    while ((cut = buffer.indexOf("\n\n")) >= 0) {
+      const block = buffer.slice(0, cut);
+      buffer = buffer.slice(cut + 2);
 
-      let evento = "message";
-      let bruto = "";
-      for (const linha of bloco.split("\n")) {
-        if (linha.startsWith("event: ")) evento = linha.slice(7);
-        else if (linha.startsWith("data: ")) bruto += linha.slice(6);
+      let event = "message";
+      let raw = "";
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event: ")) event = line.slice(7);
+        else if (line.startsWith("data: ")) raw += line.slice(6);
       }
 
-      if (bruto) yield { evento, dados: JSON.parse(bruto) };
+      if (raw) yield { event, data: JSON.parse(raw) };
     }
   }
 }

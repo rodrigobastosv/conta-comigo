@@ -1,50 +1,52 @@
 import { z } from "zod";
-import { BATIDA_FINAL, type Batida, type Cena } from "@/lib/tipos";
+import { FINAL_BEAT, type Beat, type Scene } from "@/lib/types";
 
 /**
- * Contrato de saída do modelo. Nunca confie no JSON que volta: ele vai devolver
- * 3 escolhas quando você pediu 2, e o certo é falhar e regerar — não quebrar a tela.
+ * Output contract of the model. Never trust the JSON that comes back: it will
+ * return 3 choices when you asked for 2, and the right move is to fail and
+ * regenerate — not to break the screen.
  *
- * A ordem dos campos aqui importa: "texto" vem primeiro porque a rota extrai esse
- * campo do JSON parcial enquanto ele ainda está chegando (ver lib/stream-json.ts).
+ * The field order here matters: "text" comes first because the route extracts
+ * that field from the partial JSON while it is still arriving (see
+ * lib/stream-json.ts).
  */
-export const escolhaSchema = z.strictObject({
-  rotulo: z.string().min(1).max(80),
-  icone: z.string().min(1).max(8),
+export const choiceSchema = z.strictObject({
+  label: z.string().min(1).max(80),
+  icon: z.string().min(1).max(8),
 });
 
-export const cenaSchema = z.strictObject({
-  texto: z.string().min(1),
-  fatos_novos: z.array(z.string().min(1)).max(6),
-  escolhas: z.array(escolhaSchema).max(2),
+export const sceneSchema = z.strictObject({
+  text: z.string().min(1),
+  new_facts: z.array(z.string().min(1)).max(6),
+  choices: z.array(choiceSchema).max(2),
 });
 
-export type CenaBruta = z.infer<typeof cenaSchema>;
+export type RawScene = z.infer<typeof sceneSchema>;
 
-export class CenaInvalidaError extends Error {
-  constructor(readonly motivo: string) {
-    super(`cena inválida: ${motivo}`);
-    this.name = "CenaInvalidaError";
+export class SceneInvalidError extends Error {
+  constructor(readonly reason: string) {
+    super(`invalid scene: ${reason}`);
+    this.name = "SceneInvalidError";
   }
 }
 
 /**
- * Valida a cena contra o schema E contra a regra que o schema não expressa:
- * a batida final não oferece escolhas, e toda outra batida oferece exatamente duas.
- * É esse `escolhas: []` que sinaliza fim de história para a UI.
+ * Validates the scene against the schema AND against the rule the schema cannot
+ * express: the final beat offers no choices, and every other beat offers exactly
+ * two. That `choices: []` is what signals end of story to the UI.
  */
-export function validarCena(bruta: unknown, batida: Batida): Cena {
-  const analisada = cenaSchema.safeParse(bruta);
-  if (!analisada.success) {
-    throw new CenaInvalidaError(analisada.error.issues[0]?.message ?? "formato");
+export function validateScene(raw: unknown, beat: Beat): Scene {
+  const parsed = sceneSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new SceneInvalidError(parsed.error.issues[0]?.message ?? "format");
   }
 
-  const esperado = batida === BATIDA_FINAL ? 0 : 2;
-  if (analisada.data.escolhas.length !== esperado) {
-    throw new CenaInvalidaError(
-      `batida ${batida} exige ${esperado} escolhas, veio ${analisada.data.escolhas.length}`,
+  const expected = beat === FINAL_BEAT ? 0 : 2;
+  if (parsed.data.choices.length !== expected) {
+    throw new SceneInvalidError(
+      `beat ${beat} requires ${expected} choices, got ${parsed.data.choices.length}`,
     );
   }
 
-  return analisada.data;
+  return parsed.data;
 }

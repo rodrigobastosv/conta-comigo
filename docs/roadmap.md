@@ -18,8 +18,8 @@ Ready:
 - `Sentences` in [lib/stream-json.ts](../lib/stream-json.ts) splitting the text as
   it arrives.
 - `AudioContext` already unlocked on the user gesture
-  ([lib/audio.ts](../lib/audio.ts)), with `audioContext()` exported for the queue
-  to use.
+  ([lib/audio.ts](../lib/audio.ts)) — now the thing the server voices play
+  through.
 - `profiles.preferred_voice`.
 - The decision **not** to store audio: every listen re-synthesizes, and the schema
   has no audio columns. See
@@ -37,20 +37,33 @@ Ready:
   as they arrive, the voice stops the moment a choice is tapped, the sentence
   being read is highlighted, and there are pause and "de novo" controls.
 
-**Narration works today, on the device voice, with no account and no key.**
-Measured in a real browser: the first sentence starts speaking 6.4 s before the
-scene finishes generating.
+- The per-sentence audio route for the server tiers
+  ([lib/tts/audio-route.ts](../lib/tts/audio-route.ts), wired at
+  [app/api/audio/route.ts](../app/api/audio/route.ts)), the Google adapter
+  ([lib/tts/google.ts](../lib/tts/google.ts)), and the voice picker on the start
+  screen.
 
-Missing: the route that synthesizes per sentence for the **server** tiers only
-(issue #12), and a key for one of them — plus `npm run tts:bench` to turn the
-vendors' published latency into a measured one. Also missing: a voice picker in
-the UI, so a family can choose between Dona Vitória and o contador rather than
-always getting the device voice.
+**Narration works today with no account and no key, on the device voice — and on
+Google's Chirp3-HD wherever `GOOGLE_TTS_API_KEY` is set.** Measured in a real
+browser: the first sentence starts speaking 6.4 s before the scene finishes
+generating.
+
+Missing: nothing required. What is left is optional and measured, not assumed —
+`profiles.preferred_voice` is still not read or written (the picker's choice
+lives in `useState` and resets on reload, which waits on parents' mode, issue
+#16), and ElevenLabs has no adapter because no voice is cast on it.
 
 The project constraint: **first sound in 1–2 s**, playing sentence 1 while
 sentence 3 is still being generated. Generating the whole scene's audio once it is
 finished is the wrong solution, and that is why the event is per sentence and not
 per scene.
+
+Chirp3-HD does not meet that budget on its own — measured at ~1.6 s p50, against
+a ~350 ms network floor. It is paid once per scene rather than once per sentence,
+because the queue prefetches each sentence's audio while the previous one plays,
+and it is spent watching the prose stream in rather than watching a blank screen.
+The reasoning, the tier comparison and the `pt-BR-Neural2-*` escape hatch are in
+[decisions.md](decisions.md#measured-at-last--and-chirp3-hd-is-far-slower-than-advertised).
 
 ## Persistence
 

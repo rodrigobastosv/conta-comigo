@@ -7,8 +7,14 @@ import { sentenceRange } from "@/lib/tts/highlight";
 import { PlaybackQueue } from "@/lib/tts/queue";
 import { BIBLES, DEFAULT_BIBLE_ID, bibleById } from "@/lib/story-bibles";
 import { SEEDS } from "@/lib/story-bibles/original";
-import { deviceSpeaker, deviceSpeechAvailable } from "@/lib/tts/speaker";
-import { defaultVoice } from "@/lib/tts/voices";
+import { deviceSpeechAvailable, speakerFor } from "@/lib/tts/speaker";
+import { kindOf, type Voice } from "@/lib/tts/types";
+import {
+  DEFAULT_VOICE_ID,
+  VOICES,
+  defaultVoice,
+  preferredVoice,
+} from "@/lib/tts/voices";
 import {
   FINAL_BEAT,
   type Beat,
@@ -50,6 +56,18 @@ export function Story() {
   /** Sentences of the current scene, in order, as the server closes them. */
   const [sentences, setSentences] = useState<string[]>([]);
 
+  /**
+   * The voices this deployment can actually speak. Starts as the device voice
+   * alone — the one that needs no account — and the effect below replaces it
+   * with what the server says it has credentials for.
+   *
+   * Not a build-time value and not a guess: offering a voice we cannot
+   * synthesize is worse than offering fewer, because the parent picks it and the
+   * story goes silent.
+   */
+  const [voices, setVoices] = useState<Voice[]>([defaultVoice()]);
+  const [voiceId, setVoiceId] = useState(DEFAULT_VOICE_ID);
+
   const queue = useRef<PlaybackQueue | null>(null);
   /**
    * Whether the child wants to be read to — the same value as `narrating`, kept
@@ -62,6 +80,54 @@ export function Story() {
   const wantsNarration = useRef(false);
 
   const current = path[path.length - 1] ?? null;
+  const voice = voices.find((v) => v.id === voiceId) ?? voices[0] ?? null;
+
+  /**
+   * Ask the server which voices it has keys for, once.
+   *
+   * A failure here is not an error the child should see: the list simply stays
+   * at the device voice, which always works. Narration is an enhancement to a
+   * working product, never a dependency of it.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/voices");
+        if (!response.ok) return;
+        const { voices: ids } = (await response.json()) as { voices: string[] };
+        if (cancelled) return;
+
+        // Resolved against the catalogue rather than trusted as a list of
+        // objects: labels and tiers have one home, and an id this build does not
+        // know is simply dropped.
+        const offered = VOICES.filter(
+          (v) =>
+            ids.includes(v.id) &&
+            (kindOf(v) !== "device" || deviceSpeechAvailable()),
+        );
+
+        /**
+         * Set even when it comes back empty — that is a browser with no
+         * `speechSynthesis` on a deployment with no key, and there the honest
+         * answer is no "ler pra mim" button at all. Keeping the device voice
+         * here would offer a narrator that cannot speak.
+         *
+         * Different from the `catch` below, which is a fetch that never
+         * answered: there the device voice stands, because nothing was learned.
+         */
+        setVoices(offered);
+        if (offered.length > 0) setVoiceId(preferredVoice(offered).id);
+      } catch {
+        // Offline, or the route is not there. The device voice stands.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /** Stop the voice now. Says nothing about whether narration stays on. */
   const silence = useCallback(() => {
@@ -74,10 +140,15 @@ export function Story() {
   /** A queue is single-use: every scene gets a fresh one, so nothing leaks across. */
   const startQueue = useCallback(() => {
     queue.current?.stop();
-    queue.current = new PlaybackQueue(deviceSpeaker(defaultVoice()), setSpoken);
+    // `speakerFor` is the one branch between a voice that costs nothing and one
+    // that costs money. Everything below it is the same code for both.
+    queue.current = new PlaybackQueue(
+      speakerFor(voice ?? defaultVoice()),
+      setSpoken,
+    );
     setPaused(false);
     return queue.current;
-  }, []);
+  }, [voice]);
 
   const setNarration = useCallback((on: boolean) => {
     wantsNarration.current = on;
@@ -167,7 +238,7 @@ export function Story() {
     unlockAudio();
     // In `ouvir` mode the child is not reading the screen, so narration is the
     // product; in `ler` mode it is an offer.
-    setNarration(level === "ouvir" && deviceSpeechAvailable());
+    setNarration(level === "ouvir" && voice !== null);
     setPath([]);
     setWorld(null);
     void generate(1, null, [], null);
@@ -219,7 +290,9 @@ export function Story() {
 
   const generating = phase === "generating";
   const textOnScreen = partial || current?.scene.text || "";
-  const speech = deviceSpeechAvailable();
+  // A device with no `speechSynthesis` and a deployment with no key leave the
+  // list empty, and then there is nothing to offer to read aloud.
+  const canNarrate = voice !== null;
 
   const bible = bibleById(bibleId);
   /**
@@ -343,6 +416,33 @@ export function Story() {
             ))}
           </fieldset>
 
+          {/* Only when there is a real choice. On a deployment with no key the
+              device voice is the whole list, and a picker with one option is a
+              question with one answer. */}
+          {voices.length > 1 && (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-2 text-lg">Quem vai ler pra você?</legend>
+              {voices.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setVoiceId(option.id)}
+                  aria-pressed={voiceId === option.id}
+                  className={`rounded-xl border-2 px-4 py-3 text-left text-lg transition ${
+                    voiceId === option.id
+                      ? "border-shop bg-shop/10"
+                      : "border-ink/15 bg-white/40"
+                  }`}
+                >
+                  {option.label}
+                  <span className="block text-sm text-shop/70">
+                    {option.description}
+                  </span>
+                </button>
+              ))}
+            </fieldset>
+          )}
+
           <button
             type="button"
             onClick={begin}
@@ -373,7 +473,7 @@ export function Story() {
             {generating && <span className="animate-pulse text-shop">▌</span>}
           </p>
 
-          {speech && (
+          {canNarrate && (
             <div className="flex gap-2">
               <button
                 type="button"

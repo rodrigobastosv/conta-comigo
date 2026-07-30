@@ -6,6 +6,7 @@ import {
   VOICES,
   availableVoices,
   defaultVoice,
+  preferredVoice,
   voiceById,
 } from "./voices.ts";
 
@@ -93,5 +94,27 @@ describe("availableVoices", () => {
         (v) => v.provider === "google",
       ),
     );
+  });
+});
+
+describe("preferredVoice", () => {
+  // The device voice reads a bedtime story like a train station announcement,
+  // and a five-year-old in `ouvir` mode hears nothing else. With a key
+  // configured, nobody should have to find the picker to escape it.
+  it("prefers a synthesized voice once the deployment has one", () => {
+    assert.equal(
+      preferredVoice(availableVoices(new Set(["google"]))).id,
+      "vitoria",
+    );
+  });
+
+  it("falls back to the device voice on a deployment with no keys", () => {
+    assert.equal(preferredVoice(availableVoices(new Set())).id, "dispositivo");
+  });
+
+  // A browser with no speechSynthesis and no key leaves nothing at all. Better a
+  // voice that never speaks than a crash on the start screen.
+  it("never returns nothing", () => {
+    assert.equal(preferredVoice([]).id, DEFAULT_VOICE_ID);
   });
 });

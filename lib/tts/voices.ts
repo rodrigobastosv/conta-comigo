@@ -108,3 +108,25 @@ export function availableVoices(configured: ReadonlySet<string>): Voice[] {
       (kindOf(voice) === "device" || configured.has(voice.provider)),
   );
 }
+
+/**
+ * Which of the available voices to start a child on when nobody has chosen.
+ *
+ * The best one this deployment can actually speak — a server voice if there is
+ * one, the device otherwise. `DEFAULT_VOICE_ID` above is the catalogue's
+ * no-account fallback and stays that; this is what the picker preselects, and
+ * the two differ only on a deployment that has a key.
+ *
+ * That is deliberate and it is a decision, not a tweak: on a deployment with a
+ * key, a family that never opens the picker changes narrator. It is recorded in
+ * docs/decisions.md#the-best-voice-the-deployment-can-speak-is-the-one-it-uses.
+ * The reason is that the device voice reads a bedtime story like a train station
+ * announcement, and a five-year-old in `ouvir` mode hears nothing else.
+ */
+export function preferredVoice(available: Voice[]): Voice {
+  return (
+    available.find((voice) => kindOf(voice) === "server") ??
+    available[0] ??
+    defaultVoice()
+  );
+}

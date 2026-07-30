@@ -16,7 +16,13 @@ import type { ReadingLevel, Scene } from "../types.ts";
 
 export type LevelRules = {
   words: [number, number];
-  /** Mean words per sentence. `ouvir` has a floor; `ler` only has a ceiling. */
+  /**
+   * Mean words per sentence. Neither level has a floor, and that is the whole
+   * finding of the first evaluation run: `ouvir` used to require a mean of at
+   * least 8, and the scenes that broke it were the ones written best. "Tique,
+   * tique, tique." and "Não latiu." are the rhythm of reading aloud. Put the
+   * floor back and you are asking the narrator to pad.
+   */
   sentenceWords: [number, number];
   choiceLabelWords: [number, number];
   requiresRefrain: boolean;
@@ -25,8 +31,8 @@ export type LevelRules = {
 export const RULES: Record<ReadingLevel, LevelRules> = {
   ouvir: {
     words: [90, 140],
-    sentenceWords: [8, 14],
-    choiceLabelWords: [2, 4],
+    sentenceWords: [1, 14],
+    choiceLabelWords: [2, 5],
     requiresRefrain: true,
   },
   ler: {
@@ -180,9 +186,12 @@ export function check(
   const [minLabel, maxLabel] = rules.choiceLabelWords;
   for (const [i, words] of m.choiceLabelWords.entries()) {
     if (words < minLabel || words > maxLabel) {
+      // The label itself, not just its count: a count alone cannot tell a rule
+      // the model broke from a rule that is wrong, and that is the call this
+      // check exists to support.
       fail(
         "choice-label-words",
-        `choice ${i + 1} has ${words} words, allowed ${minLabel}–${maxLabel}`,
+        `"${scene.choices[i].label}" has ${words} words, allowed ${minLabel}–${maxLabel}`,
       );
     }
   }

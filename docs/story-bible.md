@@ -51,11 +51,17 @@ espanta com uma loja que aparece do nada, isso é normal aqui.
 
 **`ouvir` (≈5 anos)** — o texto existe para ser ouvido.
 - 90–140 palavras por cena.
-- Frases de 8–14 palavras. Uma ideia por frase.
+- Uma ideia por frase, no máximo 14 palavras. **Não existe mínimo.** Frase de duas
+  palavras é ritmo de leitura em voz alta, não defeito: *"Ontem não tinha."*,
+  *"Silêncio outra vez."*, *"Não latiu."* O que cansa o ouvido de uma criança de
+  cinco anos é a frase comprida, nunca a curta.
 - Vocabulário concreto e sensorial. Zero metáfora abstrata.
 - Um **refrão** repetido a cada cena (definido na camada 2) — a criança aprende e fala junto.
-- As duas escolhas: 2 a 4 palavras cada, verbo na frente, e devem ser **visualizáveis**
-  (viram ícone). "Abrir a porta azul" ✅ · "Investigar a origem do som" ❌
+- As duas escolhas: até 5 palavras cada, verbo na frente, e devem ser **visualizáveis**
+  (viram ícone). O que decide não é o tamanho, é se dá para desenhar:
+  "Abrir a gaveta da luva" ✅ · "Investigar a origem do som" ❌ — as duas têm cinco
+  palavras, e só uma vira desenho. Em português o artigo e a preposição são de graça
+  ("a gaveta **da** luva"); contar palavras não separa a boa da ruim.
 
 **`ler` (≈8 anos)** — o texto existe para ser lido.
 - 180–260 palavras por cena.

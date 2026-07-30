@@ -3,6 +3,11 @@ node_modules
 package-lock.json
 tsconfig.tsbuildinfo
 
+# `npm run eval` writes here. Already in .gitignore, which prettier does not read
+# — without this line, every developer who runs the evaluation fails
+# `format:check` on their own untracked artifacts.
+eval-reports
+
 # Markdown is left alone on purpose. The docs are hand-wrapped at 80 columns and
 # read as prose; letting a formatter reflow them produces enormous diffs that
 # bury the one sentence that actually changed.

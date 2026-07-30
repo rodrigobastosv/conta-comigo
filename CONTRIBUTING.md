@@ -52,7 +52,10 @@ the document becomes fiction and the next person has no way to tell which of the
 two is right. Order: prose first, prompt second, `PROMPT_VERSION` last.
 
 When changing the constitution or the reading-level rules, **raise
-`PROMPT_VERSION`** in [lib/prompts/v1.ts](lib/prompts/v1.ts). Every scene stores
+`PROMPT_VERSION`** in [lib/prompts/v1.ts](lib/prompts/v1.ts), and **run
+`npm run eval` and paste its summary into the PR**. It costs a few cents and it
+is the only thing standing between a prompt change and a child reading the
+regression out loud. Every scene stores
 that version, so it is what lets you know which rules each part of the archive was
 generated under.
 

@@ -11,6 +11,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "node --experimental-strip-types --test 'lib/**/*.test.ts'",
+    "eval": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/eval.ts",
     "voices:list": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/list-voices.ts",
     "tts:bench": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/bench-tts.ts"
   },

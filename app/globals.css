@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-papel: #fdf6e8;
+  --color-tinta: #2c2418;
+  --color-loja: #b5541f;
+  --color-farelo: #d9a95c;
+  --font-conto: Georgia, "Times New Roman", serif;
+}
+
+html,
+body {
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--font-conto);
+  -webkit-text-size-adjust: 100%;
+}

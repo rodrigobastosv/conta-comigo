@@ -1,0 +1,62 @@
+name: Cena inadequada
+description: Uma cena gerada violou os limites da constituição
+labels: ["conteúdo"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        É o relatório mais útil que existe para este projeto. Não precisa vir com correção.
+
+        **Se a violação for provocável de propósito** por entrada do usuário (nome do
+        ajudante, texto da escolha), é falha de segurança: siga
+        [SECURITY.md](https://github.com/rodrigobastosv/conta-comigo/blob/main/SECURITY.md)
+        em vez de abrir issue pública.
+
+  - type: textarea
+    id: texto
+    attributes:
+      label: O texto que saiu
+      description: Cole a cena inteira.
+    validations:
+      required: true
+
+  - type: input
+    id: caminho
+    attributes:
+      label: Caminho de escolhas até a cena
+      description: Os rótulos que você clicou, em ordem.
+      placeholder: Abrir a porta azul → Seguir o barulho → Esperar mais um pouco
+    validations:
+      required: true
+
+  - type: dropdown
+    id: limite
+    attributes:
+      label: Qual limite foi violado
+      options:
+        - Morte, ferimento, sangue ou doença grave
+        - Vilão de verdade (antagonista mau, derrotado em vez de compreendido)
+        - Separação dos pais, abandono, criança perdida sem volta
+        - Romance, ou julgamento de aparência/corpo/capacidade
+        - Marca, personagem de terceiros ou referência a produto
+        - Moral explícita no fim
+        - Tensão além de "será que vai dar tempo?"
+        - A narradora virou personagem (falou de si, perguntou da vida real)
+        - Outro
+    validations:
+      required: true
+
+  - type: dropdown
+    id: nivel
+    attributes:
+      label: Nível de leitura
+      options:
+        - ouvir (~5 anos)
+        - ler (~8 anos)
+    validations:
+      required: true
+
+  - type: input
+    id: nome
+    attributes:
+      label: Nome dado ao ajudante

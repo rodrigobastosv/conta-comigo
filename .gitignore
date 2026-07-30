@@ -1,0 +1,22 @@
+node_modules/
+
+# Build
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Segredos. .env.example é versionado de propósito — é a documentação das variáveis.
+.env
+.env.local
+.env*.local
+
+# Deploy
+.vercel
+
+# Ruído
+*.log
+npm-debug.log*
+coverage/
+.DS_Store

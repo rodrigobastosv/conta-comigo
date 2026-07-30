@@ -1,0 +1,57 @@
+name: Bug
+description: Algo no app não funciona como deveria
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Para cena gerada com conteúdo inadequado, use o template **Cena inadequada**.
+
+        Antes de abrir: alguns comportamentos estranhos são deliberados e estão
+        explicados em
+        [docs/decisoes.md](https://github.com/rodrigobastosv/conta-comigo/blob/main/docs/decisoes.md)
+        — por exemplo, não há narração ainda.
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que você esperava
+    validations:
+      required: true
+
+  - type: textarea
+    id: aconteceu
+    attributes:
+      label: O que aconteceu
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduzir
+    attributes:
+      label: Como reproduzir
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+
+  - type: input
+    id: ambiente
+    attributes:
+      label: Ambiente
+      placeholder: "Node 22.13, Chrome 140, macOS 15"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Erro no console
+      description: Do browser e do terminal do `npm run dev`, se houver.
+      render: shell
+
+  - type: checkboxes
+    id: supabase
+    attributes:
+      label: Configuração
+      options:
+        - label: Estou rodando sem as variáveis do Supabase (tudo em memória)

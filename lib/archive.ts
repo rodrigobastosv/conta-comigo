@@ -63,6 +63,7 @@ export type ChildProfile = {
   age: number;
   readingLevel: ReadingLevel;
   preferredVoice: string | null;
+  preferredCompanion: string | null;
   restrictions: string[];
   forbiddenNames: string[];
 };
@@ -74,6 +75,7 @@ function asProfile(row: ProfileRow): ChildProfile {
     age: row.age,
     readingLevel: row.reading_level,
     preferredVoice: row.preferred_voice,
+    preferredCompanion: row.preferred_companion,
     restrictions: row.restrictions,
     forbiddenNames: row.forbidden_names ?? [],
   };
@@ -267,6 +269,36 @@ export function isForbiddenName(name: string, forbidden: string[]): boolean {
   return forbidden.some((entry) => flatten(entry) === wanted);
 }
 
+/**
+ * What this child picked: who reads to her, and who waits on the home screen.
+ *
+ * Two ids rather than one. A friend who reads the story has become the
+ * narrator, which is the line docs/story-bible.md draws — so the columns stay
+ * apart even though the same screen sets both.
+ */
+export async function updateChoices(
+  db: Db,
+  profileId: string,
+  choices: { preferredVoice?: string; preferredCompanion?: string },
+): Promise<boolean> {
+  // Typed against the row rather than a loose record, so a renamed column is a
+  // compile error here and not a silently ignored update at runtime.
+  const patch: Partial<ProfileRow> = {};
+  if (choices.preferredVoice) patch.preferred_voice = choices.preferredVoice;
+  if (choices.preferredCompanion) {
+    patch.preferred_companion = choices.preferredCompanion;
+  }
+  if (Object.keys(patch).length === 0) return true;
+
+  const { error } = await db.from("profiles").update(patch).eq("id", profileId);
+
+  if (error) {
+    console.error("[archive] could not save the choices", error.message);
+    return false;
+  }
+  return true;
+}
+
 export async function updateLimits(
   db: Db,
   profileId: string,
@@ -315,6 +347,48 @@ export async function endStory(db: Db, storyId: string): Promise<void> {
     .eq("id", storyId);
 
   if (error) console.error("[archive] could not end the story", error.message);
+}
+
+/**
+ * Keeping a story, and letting one go.
+ *
+ * Every scene is already stored as it is generated — "save it if you liked it"
+ * was never about saving. These are the two things that were actually missing:
+ * marking the good ones so they rise in a library that will hold thirty by
+ * month three, and removing one that went badly or frightened her.
+ */
+export async function setLoved(
+  db: Db,
+  storyId: string,
+  loved: boolean,
+): Promise<boolean> {
+  const { error } = await db
+    .from("stories")
+    .update({ loved_at: loved ? new Date().toISOString() : null })
+    .eq("id", storyId);
+
+  if (error) {
+    console.error("[archive] could not keep the story", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Removes a story and its scenes.
+ *
+ * `scenes` cascades from `stories`, so this is one delete. Irreversible, which
+ * is why the UI puts it behind a confirmation and out of a child's reach — a
+ * five-year-old tapping a bin on the story she just made is a bad evening.
+ */
+export async function deleteStory(db: Db, storyId: string): Promise<boolean> {
+  const { error } = await db.from("stories").delete().eq("id", storyId);
+
+  if (error) {
+    console.error("[archive] could not delete the story", error.message);
+    return false;
+  }
+  return true;
 }
 
 export type StoredScene = {
@@ -572,6 +646,9 @@ export async function finishedStories(
     .select("*")
     .eq("profile_id", profileId)
     .not("ended_at", "is", null)
+    // Kept ones first, then most recent. `nullsFirst: false` is what puts the
+    // unloved majority below rather than above.
+    .order("loved_at", { ascending: false, nullsFirst: false })
     .order("ended_at", { ascending: false })
     .limit(limit);
 

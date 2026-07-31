@@ -17,6 +17,7 @@ import { AdultsOnly, Parents } from "./parents";
 import { Logo } from "./pisca";
 import { Story } from "./story";
 import { ThemeToggle } from "./theme";
+import { Trail, type TrailStop } from "./trail";
 
 /**
  * Which screen the family is on.
@@ -87,6 +88,12 @@ export function Shell() {
     setFinished(done);
   }, []);
 
+  function travel(stop: TrailStop) {
+    setResuming(null);
+    setView(stop);
+    if (stop === "home" && child) void refresh(child.id);
+  }
+
   function goHome() {
     setResuming(null);
     setView("home");
@@ -155,9 +162,14 @@ export function Shell() {
     <>
       {header}
 
+      {(view === "home" || view === "library" || view === "share") && (
+        <Trail at={view} onGo={travel} />
+      )}
+
       {view === "home" && (
         <Home
           childName={child.nickname}
+          companionId={child.preferredCompanion}
           resumable={resumable}
           finishedCount={finished.length}
           onPick={(action: HomeAction) => {
@@ -175,11 +187,23 @@ export function Shell() {
       )}
 
       {view === "story" && (
-        <Story profile={child} resumeEntry={resuming} onHome={goHome} />
+        <Story
+          profile={child}
+          resumeEntry={resuming}
+          onHome={goHome}
+          // Only on the start form. Once a scene begins the story is
+          // full-screen and the trail is gone — Story owns that.
+          trail={<Trail at="story" onGo={travel} />}
+        />
       )}
 
       {(view === "library" || view === "share") && (
-        <Library profileId={child.id} intent={view} onLeave={goHome} />
+        <Library
+          profileId={child.id}
+          companionId={child.preferredCompanion}
+          intent={view}
+          onLeave={goHome}
+        />
       )}
 
       {view === "gate" && (

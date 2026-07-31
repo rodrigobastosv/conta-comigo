@@ -72,6 +72,7 @@ export type StorySummary = {
   helperName: string;
   world: World | null;
   endedAt: string | null;
+  lovedAt: string | null;
 };
 
 export function toStorySummary(row: StoryRow): StorySummary {
@@ -82,5 +83,6 @@ export function toStorySummary(row: StoryRow): StorySummary {
     helperName: row.helper_name,
     world: toWorld(row.world),
     endedAt: row.ended_at,
+    lovedAt: row.loved_at,
   };
 }

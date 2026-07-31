@@ -34,6 +34,7 @@ export type ProfileRow = {
   age: number;
   reading_level: "ouvir" | "ler";
   preferred_voice: string | null;
+  preferred_companion: string | null;
   restrictions: string[];
   forbidden_names: string[];
   created_at: string;
@@ -48,6 +49,7 @@ export type StoryRow = {
   helper_name: string;
   created_at: string;
   ended_at: string | null;
+  loved_at: string | null;
 };
 
 export type SceneRow = {
@@ -86,6 +88,7 @@ type ProfileInsert = {
   age: number;
   reading_level: "ouvir" | "ler";
   preferred_voice?: string | null;
+  preferred_companion?: string | null;
   restrictions?: string[];
   forbidden_names?: string[];
 };
@@ -97,6 +100,7 @@ type StoryInsert = {
   helper_name: string;
   world?: WorldJson | null;
   ended_at?: string | null;
+  loved_at?: string | null;
 };
 
 type SceneInsert = {

@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { bookUpTo, finishedStories, type StoryRead } from "@/lib/archive";
+import {
+  bookUpTo,
+  deleteStory,
+  finishedStories,
+  setLoved,
+  type StoryRead,
+} from "@/lib/archive";
 import { supabase } from "@/lib/supabase/browser";
-import { Pisca } from "./pisca";
+import { companionById } from "./companions";
 
 /**
  * The little book: stories that finished, read back the way they happened.
@@ -29,10 +35,12 @@ type Page = {
 
 export function Library({
   profileId,
+  companionId,
   intent,
   onLeave,
 }: {
   profileId: string;
+  companionId: string | null;
   /** Which button opened this: the list is the same, the verb is not. */
   intent: "library" | "share";
   onLeave: () => void;
@@ -41,6 +49,8 @@ export function Library({
   const [open, setOpen] = useState<StoryRead | null>(null);
   const [pages, setPages] = useState<Page[]>([]);
   const [sent, setSent] = useState<string | null>(null);
+  /** Which story is one tap from being gone. Never more than one at a time. */
+  const [removing, setRemoving] = useState<string | null>(null);
 
   useEffect(() => {
     const db = supabase();
@@ -55,6 +65,42 @@ export function Library({
       cancelled = true;
     };
   }, [profileId]);
+
+  async function toggleLoved(entry: StoryRead) {
+    const db = supabase();
+    if (!db) return;
+
+    const loved = !entry.story.lovedAt;
+    // Optimistic: the mark is a preference, and a failed write is worth a log
+    // rather than a wrong-looking shelf.
+    setStories(
+      (all) =>
+        all?.map((one) =>
+          one.story.id === entry.story.id
+            ? {
+                ...one,
+                story: {
+                  ...one.story,
+                  lovedAt: loved ? new Date().toISOString() : null,
+                },
+              }
+            : one,
+        ) ?? null,
+    );
+    await setLoved(db, entry.story.id, loved);
+  }
+
+  async function remove(entry: StoryRead) {
+    const db = supabase();
+    if (!db) return;
+
+    if (await deleteStory(db, entry.story.id)) {
+      setStories(
+        (all) => all?.filter((o) => o.story.id !== entry.story.id) ?? null,
+      );
+    }
+    setRemoving(null);
+  }
 
   async function read(entry: StoryRead) {
     const db = supabase();
@@ -148,7 +194,7 @@ export function Library({
 
       {stories?.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-10 text-center">
-          <Pisca size={96} mood="asleep" />
+          {companionById(companionId).Drawing({ size: 96, mood: "asleep" })}
           <p className="text-lg text-muted">
             Nenhuma história terminada ainda.
             <br />
@@ -159,17 +205,74 @@ export function Library({
 
       <div className="grid gap-3">
         {stories?.map((entry) => (
-          <button
+          <div
             key={entry.story.id}
-            type="button"
-            onClick={() => void read(entry)}
-            className="rounded-2xl border-2 border-edge bg-card px-5 py-5 text-left text-xl transition active:scale-[0.98]"
+            className={`rounded-2xl border-2 bg-card transition ${
+              entry.story.lovedAt ? "border-shop" : "border-edge"
+            }`}
           >
-            {entry.story.world?.title ?? entry.story.title}
-            <span className="block text-base text-muted">
-              ajudante: {entry.story.helperName}
-            </span>
-          </button>
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => void read(entry)}
+                className="flex-1 px-5 py-5 text-left text-xl"
+              >
+                {entry.story.world?.title ?? entry.story.title}
+                <span className="block text-base text-muted">
+                  ajudante: {entry.story.helperName}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void toggleLoved(entry)}
+                aria-pressed={Boolean(entry.story.lovedAt)}
+                aria-label={
+                  entry.story.lovedAt
+                    ? "Tirar dos guardados"
+                    : "Guardar essa história"
+                }
+                className="px-4 py-5 text-3xl"
+              >
+                <span aria-hidden>{entry.story.lovedAt ? "★" : "☆"}</span>
+              </button>
+            </div>
+
+            {/* Deleting sits behind a confirmation and reads as a sentence
+                rather than a bin icon — a five-year-old tapping a bin on the
+                story she just made is a bad evening. */}
+            {removing === entry.story.id ? (
+              <div className="flex flex-col gap-2 border-t-2 border-edge px-5 py-4">
+                <p className="text-base">
+                  Apagar essa história pra sempre? Não tem como voltar atrás.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void remove(entry)}
+                    className="flex-1 rounded-xl border-2 border-shop bg-shop/10 px-4 py-3 text-base"
+                  >
+                    Apagar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRemoving(null)}
+                    className="flex-1 rounded-xl border-2 border-edge px-4 py-3 text-base"
+                  >
+                    Deixa pra lá
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRemoving(entry.story.id)}
+                className="px-5 pb-3 text-sm text-muted underline"
+              >
+                Apagar essa história
+              </button>
+            )}
+          </div>
         ))}
       </div>
 

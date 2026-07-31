@@ -1,6 +1,6 @@
 "use client";
 
-import { Pisca } from "./pisca";
+import { companionById } from "./companions";
 import type { StoryRead } from "@/lib/archive";
 import { FINAL_BEAT } from "@/lib/types";
 
@@ -22,23 +22,27 @@ export type HomeAction = "new" | "resume" | "library" | "share";
 
 export function Home({
   childName,
+  companionId,
   resumable,
   finishedCount,
   onPick,
   onResume,
 }: {
   childName: string;
+  /** Whose friend is on this screen. Falls back to Pisca. */
+  companionId: string | null;
   resumable: StoryRead[];
   finishedCount: number;
   onPick: (action: HomeAction) => void;
   onResume: (entry: StoryRead) => void;
 }) {
   const waiting = resumable[0] ?? null;
+  const friend = companionById(companionId);
 
   return (
     <section className="rise-in flex flex-1 flex-col gap-6">
       <div className="flex items-center gap-4">
-        <Pisca size={72} mood="resting" />
+        <friend.Drawing size={72} mood="resting" />
         <div>
           <p className="text-2xl">Oi, {childName}!</p>
           <p className="text-base text-muted">O que a gente faz hoje?</p>

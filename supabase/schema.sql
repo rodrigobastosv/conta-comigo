@@ -14,7 +14,13 @@ create table profiles (
   age           smallint not null check (age between 2 and 14),
   -- Values stay in Portuguese: they are also in the prompt and in ReadingLevel.
   reading_level text not null check (reading_level in ('ouvir', 'ler')),
+  -- Who reads the story. An id from lib/tts/voices.ts, which outlives any
+  -- provider — see docs/decisions.md#a-voice-is-a-character-and-its-id-is-permanent.
   preferred_voice text,
+  -- Who waits on the home screen. An id from components/companions.tsx.
+  -- Deliberately NOT the same column as preferred_voice: a friend who reads the
+  -- story has become the narrator. See docs/story-bible.md.
+  preferred_companion text,
   -- Parents' mode. Free text, one restriction per entry ("cachorros grandes",
   -- "trovão"), reaching the prompt as extraRestrictions with the instruction to
   -- obey without mentioning them.
@@ -44,7 +50,10 @@ create table stories (
   -- anyway).
   helper_name text not null,
   created_at  timestamptz not null default now(),
-  ended_at    timestamptz
+  ended_at    timestamptz,
+  -- The child said she wants to keep this one. A column rather than a table:
+  -- it is one bit per story, and it sorts.
+  loved_at    timestamptz
 );
 
 create table scenes (

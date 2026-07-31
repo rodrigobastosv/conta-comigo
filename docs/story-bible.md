@@ -32,29 +32,40 @@ conversa com a criança. Nunca se refere a si mesma, nunca faz perguntas sobre a
 da criança, nunca diz que sente ou gosta de algo. A criança é a **autora**; o modelo é a
 voz que lê o que ela escolheu.
 
-### O Pisca não é a narradora
+### O Pisca é amigo da criança — e não é a narradora
 
-O app tem um mascote — **Pisca**, um vaga-lume. Ele existe porque uma criança de 5 anos
-reconhece uma cara antes de reconhecer um nome, e porque uma tela vazia esperando o
-primeiro token é um lugar ruim de se estar.
+O app tem um mascote — **Pisca**, um vaga-lume. Ele é **amigo da criança**, e isso é
+uma coisa diferente de ser a narradora.
 
-**E ele não pode virar a narradora.** A regra acima não é decoração: é o que separa este
-produto de um chatbot com um desenho na frente. Um mascote que cumprimenta, que reage à
-escolha, que fala em primeira pessoa dentro de uma cena — isso transforma a narradora em
-personagem, e toda história depois disso é outro produto.
+A regra acima ("não é amiga, não é assistente, não é personagem que conversa com a
+criança") vale para a **narradora**. Ela não proíbe este produto de ter um amigo dentro
+dele; proíbe a *voz que lê a história* de virar personagem. São dois seres, e o Pisca é
+o outro.
 
-Então a fronteira é física, não de bom senso:
+**O que isso exige é que a costura entre os dois seja perceptível.** Uma criança de 5
+anos não tem modelo mental de "narradora" e "mascote" — ela tem o que ouve. Se o Pisca
+falar logo depois da história parar, no mesmo canal, com a mesma cara de voz, ela vive
+tudo como um ser só, e aí a narradora virou personagem sem ninguém ter decidido isso.
 
+Então:
+
+- **Nunca durante uma cena.** A história é ininterrupta. O Pisca aparece antes e depois,
+  nunca no meio.
+- **Voz claramente outra**, se ele tiver voz: se soar como quem acabou de ler a
+  história, é a mesma pessoa para a criança.
+- **Nunca comenta a história nem a escolha.** "Que legal que você abriu a porta azul" é
+  a narradora se metendo a personagem. "Quer guardar essa?" é um amigo perguntando uma
+  coisa do app.
 - **Aparece**: tela inicial, prateleira vazia, a espera antes da primeira palavra, o fim
   da noite, a área dos adultos.
-- **Nunca aparece**: dentro de uma cena, nos botões de escolha, no livrinho.
-- **Nunca fala** em primeira pessoa, nunca chama a criança pelo nome, nunca comenta uma
-  escolha.
 
 Um vaga-lume e não uma coruja, e não um personagem de nenhum mundo: a Loja já tem o
 Farelo e o Circo tem a Pipoca, e um mascote emprestado de um mundo seria um estranho nos
 outros dois. Vaga-lume é de anoitecer brasileiro, que é a única coisa que toda história
 daqui tem em comum.
+
+O Pisca pode ter companhia: outros bichos entre os quais a criança escolhe o seu. Todos
+seguem estas mesmas regras — são amigos, nenhum deles lê a história.
 
 ### Limites de conteúdo (invioláveis)
 - Sem morte, ferimento, sangue, doença grave.

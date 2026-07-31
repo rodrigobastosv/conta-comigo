@@ -177,6 +177,13 @@ than it looks.
 - **The route's own file is untested.** `lib/scene-route.ts` carries the logic and
   is covered; `app/api/scene/route.ts` is a few lines of Next wiring on top of it
   and is not.
+- **The region the functions run in is unmeasured.** Every latency number in
+  [decisions.md](decisions.md) was taken from a laptop in São Paulo, not from a
+  serverless function in whichever region Vercel picked. Moving the functions to
+  `gru1` shortens the hop to the child and lengthens the one to the model, and
+  nobody has measured which way that lands. Do not pin a region on a hunch —
+  `npm run tts:bench` from the deployed function is the thing that would settle
+  it.
 - **The table types are hand-written.** [lib/supabase/types.ts](../lib/supabase/types.ts)
   mirrors `supabase/schema.sql` by hand, and a stale type file is worse than none.
   Change both in the same commit, or swap it for the generator's output.

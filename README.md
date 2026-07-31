@@ -64,6 +64,29 @@ splitting, the narration queue, the choice buttons, the write path.
 Use it for anything that is not the prompt itself. It is opt-in and never
 inferred from a missing key, and it warns in the server log on every scene.
 
+## Deploying
+
+Vercel, and production is whatever is on `main` **and passed CI**. That ordering
+is the only interesting part: Vercel's own Git integration deploys on push
+regardless of the tests, which is how a red build reaches a child at bedtime. So
+`vercel.json` switches off automatic deployment for `main` and the `deploy` job in
+[ci.yml](.github/workflows/ci.yml) hangs off `needs: verify`. Preview deployments
+on other branches stay on, because they cost nothing and break nothing.
+
+Once, to connect a fork or a new project:
+
+1. `npx vercel link`, then read `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` out of
+   `.vercel/project.json`.
+2. Add three repository secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+   `VERCEL_PROJECT_ID`. With no token the deploy job says so and passes — a fork
+   should not get a red X on its first push.
+3. Add the environment variables to the Vercel project: `ANTHROPIC_API_KEY`, the
+   two `NEXT_PUBLIC_SUPABASE_*` ones, and `GOOGLE_TTS_API_KEY` if you want the
+   server voices. The `NEXT_PUBLIC_` pair is read at build time, so changing one
+   needs a redeploy, not a restart.
+
+**Never set `FAKE_MODEL` on a deployment.** It is for a laptop.
+
 ## Documentation
 
 | Document | Answers |

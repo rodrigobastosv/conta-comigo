@@ -1,8 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  branchTo,
+  resumableStories,
+  type ChildProfile,
+  type StoryRead,
+} from "@/lib/archive";
 import { unlockAudio } from "@/lib/audio";
 import { readSSE } from "@/lib/sse";
+import { supabase } from "@/lib/supabase/browser";
 import { sentenceRange } from "@/lib/tts/highlight";
 import { PlaybackQueue } from "@/lib/tts/queue";
 import { BIBLES, DEFAULT_BIBLE_ID, bibleById } from "@/lib/story-bibles";
@@ -23,19 +30,46 @@ import {
   type World,
 } from "@/lib/types";
 
-/** A node of the path travelled. In memory today; becomes the `scenes` table later. */
+/**
+ * A node of the path travelled.
+ *
+ * `sceneId` is what the server needs to place the next scene in the graph, and
+ * it is null in two cases that both have to keep working: a deployment with no
+ * archive, and a scene whose write failed. In either case the client falls back
+ * to carrying the facts itself, which is what the in-memory path has always
+ * done.
+ */
 type PathNode = {
   beat: Beat;
   scene: Scene;
   entryChoice: string | null;
+  sceneId: string | null;
 };
 
-type Phase = "start" | "generating" | "reading" | "end";
+type Phase = "start" | "generating" | "reading" | "end" | "book";
 
-export function Story() {
+/**
+ * The signed-in adult's token, for the route to act on their behalf.
+ *
+ * Read fresh on every request rather than held in state: supabase-js refreshes
+ * it in the background, and a token captured when the screen mounted is exactly
+ * the one that has expired by the fourth beat of a bedtime story.
+ */
+async function authorization(): Promise<Record<string, string>> {
+  const db = supabase();
+  if (!db) return {};
+
+  const { data } = await db.auth.getSession();
+  const token = data.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function Story({ profile }: { profile: ChildProfile | null }) {
   const [phase, setPhase] = useState<Phase>("start");
   const [name, setName] = useState("");
-  const [level, setLevel] = useState<ReadingLevel>("ouvir");
+  const [level, setLevel] = useState<ReadingLevel>(
+    profile?.readingLevel ?? "ouvir",
+  );
   const [bibleId, setBibleId] = useState(DEFAULT_BIBLE_ID);
   const [seedId, setSeedId] = useState<string | null>(null);
   /**
@@ -48,6 +82,8 @@ export function Story() {
   const [partial, setPartial] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  /** Stories this child can pick up again. Empty where there is no archive. */
+  const [resumable, setResumable] = useState<StoryRead[]>([]);
 
   const [narrating, setNarrating] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -129,6 +165,28 @@ export function Story() {
     };
   }, []);
 
+  /**
+   * The stories waiting to be continued.
+   *
+   * Read straight from the browser rather than through a route: RLS is what
+   * decides which rows come back, so a route would add a round trip and no
+   * safety. Reloaded whenever the child returns to the start screen, so a story
+   * finished a minute ago stops being offered.
+   */
+  useEffect(() => {
+    const db = supabase();
+    if (!db || !profile || phase !== "start") return;
+
+    let cancelled = false;
+    void resumableStories(db, profile.id).then((found) => {
+      if (!cancelled) setResumable(found.filter((entry) => entry.tip));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile, phase]);
+
   /** Stop the voice now. Says nothing about whether narration stays on. */
   const silence = useCallback(() => {
     queue.current?.stop();
@@ -179,18 +237,37 @@ export function Story() {
       if (wantsNarration.current) startQueue();
 
       try {
+        /**
+         * The two dialects. With an archive the server owns the story's history
+         * — it climbs the graph from the parent's id for the facts and the world
+         * — and sending them from here as well would be a 400, on purpose. See
+         * the note at the top of lib/scene-route.ts.
+         */
+        const parent = base[base.length - 1]?.sceneId ?? null;
+        const archived = profile !== null && (beat === 1 || parent !== null);
+
         const response = await fetch("/api/scene", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(await authorization()),
+          },
           body: JSON.stringify({
             bibleId,
             beat,
             readingLevel: level,
             helperName: name.trim() || "Ajudante",
             seedId: beat === 1 ? seedId : null,
-            world: knownWorld,
-            facts: base.flatMap((node) => node.scene.new_facts),
             choiceMade,
+            ...(archived
+              ? {
+                  profileId: beat === 1 ? profile.id : null,
+                  parentSceneId: parent,
+                }
+              : {
+                  world: knownWorld,
+                  facts: base.flatMap((node) => node.scene.new_facts),
+                }),
           }),
         });
 
@@ -212,11 +289,22 @@ export function Story() {
             setSentences((s) => [...s, text]);
             if (wantsNarration.current) queue.current?.push(index, text);
           } else if (event === "scene") {
-            const scene = (data as { scene: Scene }).scene;
+            const { scene, sceneId } = data as {
+              scene: Scene;
+              sceneId?: string | null;
+            };
             // Only beat 1 of an invented world carries one, and it has to
             // survive every later beat of this run.
             if (scene.world) setWorld(scene.world);
-            setPath([...base, { beat, scene, entryChoice: choiceMade }]);
+            setPath([
+              ...base,
+              {
+                beat,
+                scene,
+                entryChoice: choiceMade,
+                sceneId: sceneId ?? null,
+              },
+            ]);
             setPartial("");
             setPhase(beat === FINAL_BEAT ? "end" : "reading");
           } else if (event === "error") {
@@ -231,8 +319,45 @@ export function Story() {
         inFlight.current = false;
       }
     },
-    [bibleId, level, name, seedId, silence, startQueue],
+    [bibleId, level, name, profile, seedId, silence, startQueue],
   );
+
+  /**
+   * Picks a story back up where it stopped.
+   *
+   * The path is rebuilt from the graph, not from anything the browser kept: the
+   * text, the choices and the beat come back exactly as they were, and so does
+   * the world, which is what an invented run would otherwise lose on a reload.
+   */
+  async function resume(entry: StoryRead) {
+    const db = supabase();
+    if (!db || !entry.tip) return;
+
+    unlockAudio();
+    const branch = await branchTo(db, entry.tip.id);
+    if (branch.length === 0) return;
+
+    setBibleId(entry.story.bibleId);
+    setName(entry.story.helperName);
+    setWorld(entry.story.world);
+    setNarration(level === "ouvir" && voice !== null);
+    setPath(
+      branch.map((scene) => ({
+        beat: scene.beat,
+        scene: {
+          text: scene.text,
+          world: null,
+          new_facts: scene.newFacts,
+          choices: scene.choices,
+        },
+        entryChoice: scene.entryChoice,
+        sceneId: scene.id,
+      })),
+    );
+    setSentences([]);
+    setPartial("");
+    setPhase(branch[branch.length - 1].beat === FINAL_BEAT ? "end" : "reading");
+  }
 
   function begin() {
     unlockAudio();
@@ -319,6 +444,30 @@ export function Story() {
 
       {phase === "start" && (
         <section className="flex flex-1 flex-col justify-center gap-6">
+          {/* First, before anything to fill in: a story already begun is one
+              tap, and a five-year-old should not have to read a list to find
+              it. Big targets, few of them, the title she named it. */}
+          {resumable.length > 0 && (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-2 text-lg">Continuar de onde parou</legend>
+              <div className="grid gap-3">
+                {resumable.map((entry) => (
+                  <button
+                    key={entry.story.id}
+                    type="button"
+                    onClick={() => void resume(entry)}
+                    className="rounded-2xl border-2 border-shop bg-white/60 px-5 py-5 text-left text-xl active:bg-shop/10"
+                  >
+                    {entry.story.world?.title ?? entry.story.title}
+                    <span className="block text-base text-shop/70">
+                      parou na cena {entry.tip?.beat} de {FINAL_BEAT}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
           <label className="flex flex-col gap-2">
             <span className="text-lg">
               Como você quer se chamar nessa história?
@@ -456,6 +605,37 @@ export function Story() {
         </section>
       )}
 
+      {/* The little book: the path travelled, start to finish. A plain scroll of
+          the scenes in order, which is most of the value of an archive — she
+          reads back the story she made, including the parts she chose. */}
+      {phase === "book" && (
+        <section className="flex flex-1 flex-col gap-8">
+          {path.map((node) => (
+            <article
+              key={node.sceneId ?? node.beat}
+              className="flex flex-col gap-2"
+            >
+              {node.entryChoice && (
+                <p className="text-base text-shop/70">
+                  Você escolheu: {node.entryChoice}
+                </p>
+              )}
+              <p className="whitespace-pre-wrap text-xl leading-relaxed md:text-2xl">
+                {node.scene.text}
+              </p>
+            </article>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setPhase("end")}
+            className="rounded-2xl border-2 border-shop bg-white/60 px-5 py-4 text-xl"
+          >
+            Voltar
+          </button>
+        </section>
+      )}
+
       {(phase === "generating" || phase === "reading" || phase === "end") && (
         <section className="flex flex-1 flex-col gap-8">
           <p className="whitespace-pre-wrap text-xl leading-relaxed md:text-2xl">
@@ -538,6 +718,16 @@ export function Story() {
                 className="rounded-2xl border-2 border-shop bg-white/60 px-5 py-4 text-xl"
               >
                 E se a gente tivesse escolhido diferente?
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  silence();
+                  setPhase("book");
+                }}
+                className="rounded-2xl border-2 border-ink/15 bg-white/60 px-5 py-4 text-xl"
+              >
+                Ler a história inteira
               </button>
               <button
                 type="button"

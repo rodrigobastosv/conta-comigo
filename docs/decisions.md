@@ -457,12 +457,84 @@ are fixed: **never edit a case to make a run pass.**
 ## The generation ceiling is on the server
 
 The front end is inspectable by any 8-year-old with a curious finger. The limit
-lives in [app/api/scene/route.ts](../app/api/scene/route.ts), before any call to
-the model, and returns 429.
+lives in [lib/scene-route.ts](../lib/scene-route.ts), before any call to the
+model, and returns 429.
 
-It sits in a `Map` in the process memory, which is only correct with one instance.
-It is conscious debt, with a `TODO` in the code: with two instances, each counts
-its own ceiling and the total doubles.
+Where there is an archive it is counted in Postgres, by `claim_generation()`,
+which every instance shares. Three properties, each of which was a bug in the
+`Map` this replaced:
+
+- **Atomic.** One statement, an upsert that increments. Read-then-write from two
+  instances is the same bug in a new place, so it is not written that way.
+- **Keyed by the guardian, and the key is not the caller's to choose.** The
+  function is `security definer` and reads `auth.uid()` itself. Keying by
+  `x-forwarded-for` meant every family behind one NAT shared a ceiling and every
+  developer was `"local"`.
+- **Checked after reuse, not before.** A scene served from the archive costs no
+  generation, so it must not spend a place in the ceiling — otherwise re-reading
+  a finished story eats the evening's budget.
+
+**It fails closed.** If the database cannot be reached, the route answers 503 and
+generates nothing. Failing open on a route that costs money per call would be a
+decision, so here is the decision: an archive that cannot count is also an archive
+that cannot store, and generating anyway spends money on a scene with nowhere to
+live. The child sees "tente de novo" instead of a story that evaporates.
+
+The in-memory `Map` is still there for the one case it is correct in: a
+deployment with no Supabase variables, keyed by IP. That is a contributor's
+laptop, which is one process by definition.
+
+## The adult signs in, and RLS is the boundary
+
+E-mail and password for the responsible adult, **with no confirmation step**.
+Every request to the archive runs as that adult's JWT, so the policies in
+[supabase/schema.sql](../supabase/schema.sql) are the actual boundary between one
+family's child and another's.
+
+**There is no service-role key in this repository.** That is the whole decision,
+and it is the one thing not to undo casually. The alternative on the table was
+service-role writes with the application scoping every query itself — faster to a
+working archive, and it makes RLS decoration: from that moment on, one missing
+`where` in one query is another family's child's bedtime story on your screen. Not
+a vulnerability you find in review, either; the query still returns rows, they are
+just the wrong ones. With the key absent, the database refuses before application
+code gets the chance to be wrong.
+
+The cost is that the login lands in front of the first story, and that is a real
+cost — it is the screen a tired parent meets before a five-year-old gets a story.
+Two things pay it down:
+
+- **No e-mail confirmation.** A parent who has to go and find a link in an inbox
+  while a child waits has already lost the evening. Sign-up gives a session
+  immediately. The trade is deliberate: this account holds nicknames, ages and
+  invented stories — no payment details, no real names required — and the
+  realistic threat is somebody signing up with an address that is not theirs,
+  which costs them nothing and us one row.
+- **Anonymous sign-in was considered and rejected**, though it is the more
+  obvious fit for "the archive must survive a reload, not a lost phone". It keeps
+  the archive on the device: clear the browser storage and a year of stories is
+  gone with no way back, and the upgrade-to-a-real-account path would have to be
+  built before that could ever be undone. An e-mail is the cheapest thing that
+  makes an archive outlive a phone.
+
+What would make us revisit it: a measurable number of families who open the app
+and never get past the login. That is the number this decision is betting on, and
+nobody has it yet.
+
+### What this means when writing a query
+
+Every function in [lib/archive.ts](../lib/archive.ts) takes the client instead of
+reaching for one, and both halves of the app pass a client scoped to a real
+person. There is no privileged path — **a query for another family's row returns
+nothing, not an error.** Read "not found" as the policy working. Never widen a
+query to make a row appear.
+
+The trust boundary, precisely: the browser holds a publishable key (a routing
+token, public by design) and the adult's session. The route holds the same
+publishable key plus whatever token arrived on the request. Nothing anywhere in
+this repository can read a row without a user behind it. `claim_generation` is the
+single exception and it is `security definer` for a reason spelled out beside it —
+its key is `auth.uid()` read inside the function, never an argument.
 
 ## Development runs on a fake narrator, not on a second model
 
@@ -506,6 +578,19 @@ The unique index `scenes_parent_choice` in
 same option again must **reuse** the scene that already exists, not generate
 another one: the child expects to find the same story again, and regenerating
 charges the API for something already paid for.
+
+The index is the correctness boundary; the lookup in front of it is only the fast
+path. Two requests for the same (parent, choice) arriving together both miss the
+lookup and both generate — and then exactly one insert wins. The loser reads the
+winner's row and serves that, so one scene exists and both children are answered.
+Surfacing the violation would show a five-year-old an error caused by her own
+double tap.
+
+**A reused scene is replayed in one delta, with no typing animation.** There is a
+real temptation to throttle it so it "looks generated"; it was refused. Nothing
+may delay the first token, and a scene she has already read is the last place to
+start spending her attention. The sentence events are still emitted, in order, so
+the narration queue works on a re-read exactly as it does the first time.
 
 ## The prompt is versioned and the version is stored on the scene
 

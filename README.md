@@ -31,8 +31,24 @@ npm run build   # does not need an API key
 ```
 
 Only `ANTHROPIC_API_KEY` is required. Without the Supabase variables the app runs
-entirely in memory: the story works end to end, but reloading the page loses the
-path travelled.
+entirely in memory: the story works end to end, there is no sign-in, and reloading
+the page loses the path travelled.
+
+### With an archive
+
+Two variables and two clicks, once:
+
+1. Supabase dashboard → **SQL editor** → run [supabase/schema.sql](supabase/schema.sql).
+2. **Authentication → Sign In / Providers → Email** → turn **Confirm email** off.
+   A parent hunting for a link in an inbox while a five-year-old waits has already
+   lost the evening; the reasoning is in
+   [docs/decisions.md](docs/decisions.md#the-adult-signs-in-and-rls-is-the-boundary).
+3. Put `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
+   `.env.local`.
+
+Then stories persist, the archive grows, and a story can be picked up where it
+stopped. Both keys are public by design — **there is no service-role key in this
+project**, and adding one would turn RLS from the boundary into decoration.
 
 ### Without a key, and without a bill
 
@@ -88,11 +104,12 @@ Details in [docs/architecture.md](docs/architecture.md).
 ## Current state
 
 Works end to end: generates all five scenes, branches, goes back one scene and
-takes the other path.
+takes the other path, reads itself aloud, and — where Supabase is configured —
+stores every scene, picks a story back up after a reload, and never regenerates a
+scene that already exists.
 
-Does not exist yet: **narration (TTS)** — the hook is ready, the pt-BR voice is
-missing; **persistence** — the schema is written, the app does not write to it;
-parents' mode; illustrations in place of the emoji; the evaluation set. See
+Does not exist yet: parents' mode (restrictions reach the prompt, but nothing sets
+them yet); illustrations in place of the emoji; speculative pre-generation. See
 [docs/roadmap.md](docs/roadmap.md), and the GitHub issues for the sequenced
 version of that list.
 

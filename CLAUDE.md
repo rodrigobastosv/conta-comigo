@@ -41,10 +41,15 @@ Before "fixing" any of these, read [docs/decisions.md](docs/decisions.md):
 
 - `text` is the first field of `sceneSchema` **on purpose** — the streaming reader
   extracts that field from the partial JSON.
-- [lib/audio.ts](lib/audio.ts) creates an `AudioContext` nobody consumes **on
-  purpose**, and speaks an empty utterance at zero volume — the iOS unlock has to
-  happen inside a user gesture, and `speechSynthesis` and `AudioContext` ask for
-  that permission separately.
+- [lib/audio.ts](lib/audio.ts) unlocks an `AudioContext` **and** speaks an empty
+  utterance at zero volume — the iOS unlock has to happen inside a user gesture,
+  and `speechSynthesis` and `AudioContext` ask for that permission separately.
+  The context is what `serverSpeaker` plays through; the utterance is for the
+  device voice. Both halves have a consumer.
+- [lib/tts/queue.ts](lib/tts/queue.ts) calls `speaker.prime()` on arrival and
+  still speaks in order **on purpose** — the prefetch is what hides a server
+  voice's ~1.6 s behind the previous sentence's playback. Order is the queue's;
+  only the fetching runs ahead.
 - [lib/tts/speaker.ts](lib/tts/speaker.ts) skips the first pt-BR voice the device
   offers **on purpose** — on macOS that is a novelty voice, not Luciana.
 - [lib/tts/queue.ts](lib/tts/queue.ts) serialises playback instead of handing

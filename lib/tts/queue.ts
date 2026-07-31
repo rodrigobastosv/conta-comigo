@@ -52,6 +52,13 @@ export class PlaybackQueue {
   push(index: number, text: string): void {
     if (this.stopped) return;
     this.waiting.set(index, text);
+    /**
+     * On arrival, not on its turn. A server voice fetches its audio here, so by
+     * the time this sentence is reached its sound is already decoded — which is
+     * what keeps the gap between two sentences a breath rather than a round
+     * trip. Order is still this queue's to decide; only the fetching is early.
+     */
+    this.speaker.prime?.(text);
     void this.pump();
   }
 

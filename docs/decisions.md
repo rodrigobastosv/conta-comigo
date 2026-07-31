@@ -167,6 +167,11 @@ Sonic 3, ~300–600 ms for OpenAI — and the budget is first sound in 1–2 s, 
 also has to cover generating the first sentence. Everything credible fits. Accent,
 licensing and the depth of the voice library decided instead.
 
+(Those published figures turned out to be worth very little: measured, Google's
+Chirp3-HD is ~1.6 s, not the ~75 ms class. See the table below. The choice of
+provider survived it; the assumption that vendor latency means anything did
+not.)
+
 Cartesia Sonic 3 remains the runner-up on the paid rung: cheaper than ElevenLabs
 and explicitly Brazil-targeted. **Switch if** the bill becomes the binding
 constraint, or if pt-BR pronunciation complaints show up in real scenes.
@@ -190,12 +195,54 @@ constraint is arithmetic: 10,000 credits a month is about 10 minutes of audio, a
 That is **roughly two stories a month**, against Google's ~285. It is fine for
 trying a voice out; it is not a tier anyone can read bedtime stories on.
 
-### The numbers above are vendor claims
+### Measured, at last — and Chirp3-HD is far slower than advertised
 
-Nobody has had an account on any of them yet, so nothing here is measured.
-[scripts/bench-tts.ts](../scripts/bench-tts.ts) measures time to first playable
-audio for whichever providers are configured, from where the users are, on real
-sentences. Run it and paste the table here. Vendor marketing is not evidence.
+`npm run tts:bench`, five runs per row, from São Paulo against the global
+endpoint, on real first sentences:
+
+| Voice | Words | p50 | p95 | Worst |
+| --- | --- | --- | --- | --- |
+| `vitoria` (Chirp3-HD-Achernar) | 10 | 1643 ms | 1850 ms | 1850 ms |
+| `vitoria` | 15 | 1847 ms | 1970 ms | 1970 ms |
+| `contador` (Chirp3-HD-Achird) | 10 | 1478 ms | 1637 ms | 1637 ms |
+| `contador` | 15 | 1249 ms | 1795 ms | 1795 ms |
+
+That is **~20× the ~75 ms the decision above quoted from vendor pages**, and it
+alone spends the whole 1–2 s budget that was also supposed to cover generating
+the sentence.
+
+It is the model, not the distance. Same endpoint, same sentence, same encoding:
+
+| pt-BR tier | p50 | min |
+| --- | --- | --- |
+| Chirp3-HD | 1571 ms | 1007 ms |
+| Wavenet | 1057 ms | 522 ms |
+| Neural2 | 566 ms | 351 ms |
+| Standard | 413 ms | 348 ms |
+
+The ~350 ms floor is the round trip; Chirp3-HD spends ~1.2 s on top of it
+synthesizing. Regional endpoints do not help — `southamerica-east1` and
+`us-central1` both 404 for Chirp3 voices.
+
+**We kept Chirp3-HD anyway**, because of where the cost actually lands:
+
+- **It is paid once per scene, not once per sentence.** `PlaybackQueue.push`
+  primes a sentence's audio the moment it arrives, so every sentence after the
+  first is fetched while the previous one is still playing and its latency is
+  invisible. Only sentence 1 is exposed.
+- **It is not silence.** The prose is already streaming onto the screen while the
+  clip is being made. The child watches the story appear and the voice joins it;
+  the 1–2 s budget was written imagining a blank screen, which is not what
+  happens.
+- **The alternative is the thing we set out to fix.** Standard is the robotic
+  voice this whole exercise exists to escape. Neural2 at 566 ms is the real
+  option, and it is audibly more synthetic than Chirp3-HD.
+
+**Switch to Neural2 if** the wait before the first sentence turns out to bother a
+real child more than the voice quality helps — that is one `providerVoiceId` per
+entry in [lib/tts/voices.ts](../lib/tts/voices.ts), and the ids are
+`pt-BR-Neural2-A` (female) and `pt-BR-Neural2-B` (male). Measure with a child
+before deciding; do not re-cast on a hunch.
 
 ## The narration is not stored anywhere
 
@@ -265,6 +312,31 @@ narrates with no account at all. Changing it silently changes the narrator of
 every profile that never picked one, which makes it a decision to record here
 rather than a tweak.
 
+## The best voice the deployment can speak is the one it uses
+
+`DEFAULT_VOICE_ID` is the catalogue's answer when there is nothing else — a fresh
+clone, no key, no account. `preferredVoice()` is what the picker actually
+preselects, and it takes the first **server** voice the deployment has
+credentials for, falling back to the device.
+
+So the two differ exactly on a deployment with a key, and there a family that
+never opens the picker gets Dona Vitória rather than the operating system.
+
+That is the point. The device voice exists so narration ships and so the queue
+could be built before anyone signed up for anything, and it does that job well —
+but it reads a bedtime story the way a train station announces a platform
+change. A five-year-old in `ouvir` mode is not reading the screen; the voice is
+the entire product for them. Leaving the good voice behind a picker most parents
+never open would mean paying for a key and shipping the robot anyway.
+
+**The reason this is written down and not just done:** it changes who reads the
+story, and per the rule above that is never a silent change. What makes it
+acceptable is that it can only ever *add* quality — with no key configured,
+nothing moves.
+
+**Undo it by** having the picker preselect `defaultVoice()` instead. The cost of
+that is a family who never finds the picker never hearing what the key bought.
+
 A male voice does not contradict the constitution's "Você é a NARRADORA". The
 narrator never refers to herself — that is a limit in
 [story-bible.md](story-bible.md) — so nothing the child hears is gendered, and the
@@ -283,9 +355,17 @@ Miss this and the symptom is the first scene coming out silent on iOS and nowher
 else, with no error anywhere — iOS does not reject a `speak()` made outside a
 gesture, it ignores it.
 
-The `AudioContext` half still has no consumer: the device voice does not need it.
-It is there for the server tier (issue #12), which will play real audio files.
-Leave it.
+The `AudioContext` half is what the server tier plays through:
+`serverSpeaker` in [lib/tts/speaker.ts](../lib/tts/speaker.ts) decodes each
+sentence's clip and starts it on that context. It could have used an `<audio>`
+element instead, and did not — the element would need its own permission, taken
+inside the same one-off gesture, and the context is already unlocked. It also
+gives pause and resume for free (`suspend`/`resume` on the context), which is
+safe here only because the context has exactly one consumer: the narration, one
+sentence at a time.
+
+The `speechSynthesis` half stays for the device voice, which does not touch the
+context at all. Both halves are still needed; neither is dead code.
 
 ## A cartoon voice is not a bedtime voice
 

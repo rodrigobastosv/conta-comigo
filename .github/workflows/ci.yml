@@ -32,6 +32,35 @@ jobs:
       - name: Format
         run: npm run format:check
 
-      # Does not need ANTHROPIC_API_KEY: the client is only constructed at runtime.
+      # Needs neither the model key nor the Supabase variables: the Anthropic
+      # client is built on first use, and with no Supabase variables the app is
+      # simply the in-memory one.
       - name: Build
         run: npm run build
+
+  # Production is whatever is on main and passed the job above. Vercel's own Git
+  # integration would deploy on push regardless of CI, which is how a red build
+  # reaches a child at bedtime — so it is switched off in vercel.json and the
+  # deploy hangs off `needs: verify` instead.
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # A fork, or a clone that has never been connected to a Vercel project,
+      # has no token. That is not a failure — it is somebody else's repository,
+      # and a red X on their first push is a bad welcome.
+      - name: Deploy to Vercel
+        if: env.VERCEL_TOKEN != ''
+        run: npx --yes vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN"
+
+      - name: No deploy target configured
+        if: env.VERCEL_TOKEN == ''
+        run: echo "No VERCEL_TOKEN secret; nothing to deploy to. See README."

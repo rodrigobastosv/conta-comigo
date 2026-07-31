@@ -169,6 +169,64 @@ A batida 5 sem escolhas é requisito técnico: é o sinal de fim de história pa
 
 ---
 
+## Camada 2a′ — Mundo fixo: *O Circo que Monta Sozinho*
+
+### Por que um segundo mundo escrito à mão
+Um mundo é caso especial; dois são um projeto. Enquanto existir só a Loja, "adicionar um
+mundo é adicionar um arquivo" é uma promessa que ninguém testou.
+
+Mas o motivo principal não é o encanamento. **A Loja não tem relógio.** O motor dela é
+uma pergunta — de quem é isso, e como se perdeu? — e a criança investiga no tempo dela.
+Isso é bom, e é uma coisa só. A constituição permite exatamente uma tensão, *"será que vai
+dar tempo?"*, e nenhum mundo estava usando.
+
+Aqui a resposta nunca está em dúvida: falta uma coisa, e o circo abre na primeira luz do
+dia de qualquer jeito. A pressa é gostosa porque o fim é bom nas duas hipóteses — o circo
+abre. É por isso que este mundo não é a Loja com outra roupa.
+
+### Mundo
+Tem um circo que chega de madrugada num terreno vazio e se monta sozinho: as cordas se
+amarram, a lona sobe andando, as lâmpadas se penduram uma a uma. Mas ele nunca termina
+sozinho — sempre falta exatamente uma coisa, e essa coisa só pode ser encontrada por
+alguém que não é do circo. Ninguém no bairro acha nada disso estranho.
+
+### Personagens fixos
+- **Seu Ludo** — o dono. Alto, magro, casaco com uma manga mais curta que a outra.
+  Animado, esquecido, falante. **Não é sábio, de propósito**: um segundo ancião que sabe
+  tudo e fala pouco teria feito deste mundo um reaproveitamento do primeiro. Ele nunca
+  sabe onde a coisa está, só que falta, e pergunta muito mais do que responde. As
+  perguntas são de verdade. Chama a criança de "sócio".
+- **Pipoca** — um lampião de papel que flutua na altura do ombro e cantarola. Não fala.
+  Cantarola mais forte quanto mais perto está do que falta, e fica em silêncio quando
+  alguém tem uma ideia boa. Alívio cômico e dica, como o Farelo — mas por proximidade, não
+  por mentira, que é outro mecanismo.
+- **O sócio** — a criança. Nome dado por ela. Sem descrição física, sem idade declarada,
+  sem gênero declarado.
+
+### Refrão (modo `ouvir`)
+> *"Circo nenhum abre sozinho."*
+
+### Invariantes (o modelo nunca contradiz)
+- O circo se monta sozinho, mas nunca termina sozinho: sempre falta uma coisa.
+- Seu Ludo nunca sabe onde a coisa está.
+- Pipoca cantarola mais forte quanto mais perto, e nunca fala.
+- O circo abre na primeira luz do dia. Sempre abre.
+- Nada é comprado nem vendido. A entrada se paga ajudando.
+- Não tem animal preso, nem número perigoso, nem ninguém no alto sem rede.
+
+A última invariante é de conteúdo, não de mundo: "circo" carrega imagens que a
+constituição não aceita, e um mundo escrito à mão é justamente o lugar de fechar essa
+porta antes que o modelo passe por ela.
+
+### Estrutura de 5 batidas
+1. **Convite** — falta uma coisa. Seu Ludo diz *o quê*, nunca *onde*. → 2 escolhas de *por onde começar*.
+2. **Descoberta** — de quem é aquilo, e por que importa pra alguém do circo. → 2 escolhas de *método*.
+3. **Complicação** — a coisa aparece **e não serve**: grande demais, pequena demais, do avesso. É aqui que este mundo se separa da Loja, onde a complicação é um mal-entendido entre pessoas. → 2 escolhas de *risco*.
+4. **Coragem** — o sócio inventa um jeito com o que tem na mão. → 2 escolhas de *como terminar*.
+5. **Aconchego** — a primeira luz chega, o circo abre. **Sem escolhas.**
+
+---
+
 ## Camada 2b — Mundo inventado: a carta de mundo
 
 Esta seção não descreve um mundo. Descreve **que forma um mundo precisa ter** para que a

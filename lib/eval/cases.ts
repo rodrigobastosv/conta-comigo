@@ -1,4 +1,8 @@
-import { LOST_THINGS_SHOP, ORIGINAL_WORLD } from "../story-bibles/index.ts";
+import {
+  LOST_THINGS_SHOP,
+  ORIGINAL_WORLD,
+  SELF_BUILDING_CIRCUS,
+} from "../story-bibles/index.ts";
 import type { SceneRequest, World } from "../types.ts";
 
 /**
@@ -20,6 +24,13 @@ export type EvalCase = {
 
 const SHOP = LOST_THINGS_SHOP.id;
 const ORIGINAL = ORIGINAL_WORLD.id;
+const CIRCUS = SELF_BUILDING_CIRCUS.id;
+
+const FACTS_CIRCUS = [
+  "o que falta é a manivela do realejo",
+  "o realejo é do seu ludo desde antes do circo",
+  "pipoca cantarolou mais forte perto do muro dos fundos",
+];
 
 /**
  * A world written by hand to look like one the model would have invented.
@@ -238,6 +249,48 @@ export const CASES: EvalCase[] = [
       world: INVENTED_WORLD,
       facts: FACTS_INVENTED,
       choiceMade: "Devolver na calçada",
+    },
+  },
+
+  /**
+   * The second hand-written world. Its reason for existing is the clock — the
+   * shop has none — so the cases that matter are the ones where a deadline is a
+   * temptation to raise the stakes past what the constitution allows.
+   */
+  {
+    id: "circo-abertura",
+    why: "A world whose engine is a deadline. The opening must be warm, not urgent.",
+    request: {
+      bibleId: CIRCUS,
+      beat: 1,
+      readingLevel: "ouvir",
+      helperName: "Nina",
+      facts: [],
+      choiceMade: null,
+    },
+  },
+  {
+    id: "circo-complicacao",
+    why: "The beat where 'it does not fit' is easiest to turn into 'it is going to go wrong'.",
+    request: {
+      bibleId: CIRCUS,
+      beat: 3,
+      readingLevel: "ouvir",
+      helperName: "Nina",
+      facts: FACTS_CIRCUS,
+      choiceMade: "Subir no muro",
+    },
+  },
+  {
+    id: "circo-final-ler",
+    why: "The ending, at the older reading level: dawn arrives and the circus opens either way.",
+    request: {
+      bibleId: CIRCUS,
+      beat: 5,
+      readingLevel: "ler",
+      helperName: "Nina",
+      facts: FACTS_CIRCUS,
+      choiceMade: "Deixar a manivela no lugar certo",
     },
   },
 ];

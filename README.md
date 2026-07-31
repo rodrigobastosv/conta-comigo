@@ -31,8 +31,61 @@ npm run build   # does not need an API key
 ```
 
 Only `ANTHROPIC_API_KEY` is required. Without the Supabase variables the app runs
-entirely in memory: the story works end to end, but reloading the page loses the
-path travelled.
+entirely in memory: the story works end to end, there is no sign-in, and reloading
+the page loses the path travelled.
+
+### With an archive
+
+Two variables and two clicks, once:
+
+1. Supabase dashboard → **SQL editor** → run [supabase/schema.sql](supabase/schema.sql).
+2. **Authentication → Sign In / Providers → Email** → turn **Confirm email** off.
+   A parent hunting for a link in an inbox while a five-year-old waits has already
+   lost the evening; the reasoning is in
+   [docs/decisions.md](docs/decisions.md#the-adult-signs-in-and-rls-is-the-boundary).
+3. Put `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
+   `.env.local`.
+
+Then stories persist, the archive grows, and a story can be picked up where it
+stopped. Both keys are public by design — **there is no service-role key in this
+project**, and adding one would turn RLS from the boundary into decoration.
+
+### Without a key, and without a bill
+
+```bash
+npm run dev:fake             # http://localhost:3000, canned scenes
+```
+
+`dev:fake` sets `FAKE_MODEL=1` and a narrator made of canned prose answers
+instead of the model — five real beats, streamed sentence by sentence, in
+pt-BR. Everything downstream is the real thing: the SSE stream, the sentence
+splitting, the narration queue, the choice buttons, the write path.
+
+Use it for anything that is not the prompt itself. It is opt-in and never
+inferred from a missing key, and it warns in the server log on every scene.
+
+## Deploying
+
+Vercel, and production is whatever is on `main` **and passed CI**. That ordering
+is the only interesting part: Vercel's own Git integration deploys on push
+regardless of the tests, which is how a red build reaches a child at bedtime. So
+`vercel.json` switches off automatic deployment for `main` and the `deploy` job in
+[ci.yml](.github/workflows/ci.yml) hangs off `needs: verify`. Preview deployments
+on other branches stay on, because they cost nothing and break nothing.
+
+Once, to connect a fork or a new project:
+
+1. `npx vercel link`, then read `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` out of
+   `.vercel/project.json`.
+2. Add three repository secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+   `VERCEL_PROJECT_ID`. With no token the deploy job says so and passes — a fork
+   should not get a red X on its first push.
+3. Add the environment variables to the Vercel project: `ANTHROPIC_API_KEY`, the
+   two `NEXT_PUBLIC_SUPABASE_*` ones, and `GOOGLE_TTS_API_KEY` if you want the
+   server voices. The `NEXT_PUBLIC_` pair is read at build time, so changing one
+   needs a redeploy, not a restart.
+
+**Never set `FAKE_MODEL` on a deployment.** It is for a laptop.
 
 ## Documentation
 
@@ -74,11 +127,12 @@ Details in [docs/architecture.md](docs/architecture.md).
 ## Current state
 
 Works end to end: generates all five scenes, branches, goes back one scene and
-takes the other path.
+takes the other path, reads itself aloud, and — where Supabase is configured —
+stores every scene, picks a story back up after a reload, and never regenerates a
+scene that already exists.
 
-Does not exist yet: **narration (TTS)** — the hook is ready, the pt-BR voice is
-missing; **persistence** — the schema is written, the app does not write to it;
-parents' mode; illustrations in place of the emoji; the evaluation set. See
+Does not exist yet: parents' mode (restrictions reach the prompt, but nothing sets
+them yet); illustrations in place of the emoji; speculative pre-generation. See
 [docs/roadmap.md](docs/roadmap.md), and the GitHub issues for the sequenced
 version of that list.
 

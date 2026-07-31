@@ -12,8 +12,10 @@ sequenceDiagram
     participant G as lib/generate-scene.ts
     participant A as Anthropic API
 
-    C->>R: POST /api/scene (beat, level, name, facts, choice)
-    R->>R: generation ceiling + Zod validation of the body
+    C->>R: POST /api/scene (beat, level, name, parent scene, choice)
+    R->>R: Zod validation of the body, then the graph: parent, facts, world
+    R->>R: an existing scene for this (parent, choice) is replayed, not regenerated
+    R->>R: generation ceiling
     R->>G: generateScene(request)
     G->>A: messages.stream (cached system + volatile request)
     loop while the JSON arrives
@@ -103,17 +105,45 @@ same parent. The archive grows and you can go back and see the other path.
 with `scenes.parent_scene_id` pointing at the parent.
 
 - `scene_path(uuid)` is a recursive CTE that climbs to the root. It is what
-  assembles the little book to re-read and the set of facts of that branch.
+  assembles the set of facts of that branch, server-side, on every call.
 - The unique index `scenes_parent_choice` on `(parent_scene_id, entry_choice)`
   guarantees a parent cannot have two scenes for the same choice: **reuse, don't
   regenerate.**
 - RLS enabled on all three tables. Each guardian only reaches what is theirs; no
   child's data crosses accounts.
 
-**This schema is not used by the app yet.** Today the client keeps the path in
-memory (`useState` in [components/story.tsx](../components/story.tsx)) and sends
-the accumulated facts in the POST body. Reloading the page loses the path. See
-[roadmap.md](roadmap.md).
+## Where the trust boundary is
+
+There is no service-role key anywhere in this repository, and that is the design
+rather than an omission. The browser holds a publishable key and the signed-in
+adult's session; the route holds the same publishable key and whatever token
+arrived on the request. **Every query in the app runs as a real person**, so the
+policies are the boundary and not a second opinion — a query that strays into
+another family's data returns nothing rather than their rows.
+
+The consequence for anyone writing a query: a missing row is usually the policy
+working. See
+[decisions.md](decisions.md#the-adult-signs-in-and-rls-is-the-boundary).
+
+`claim_generation()` is the one `security definer` function, and its key is
+`auth.uid()` read inside the function rather than an argument — a ceiling whose
+key the caller picks is not a ceiling.
+
+## Two ways through the route
+
+Which one runs depends on whether the caller brought a session:
+
+| | With an archive | Without one |
+| --- | --- | --- |
+| Layer 2 (an invented world) | `stories.world` | round-trips through the browser |
+| Layer 3 (the facts) | `scene_path()` on the parent | accumulated in the client and posted |
+| The beat | derived from the parent's, and a mismatch is a 400 | believed |
+| An existing (parent, choice) | replayed from the archive, no model call | regenerated |
+| The ceiling | `claim_generation()`, keyed by guardian | a `Map`, keyed by IP |
+
+The second column is what a contributor with only an `ANTHROPIC_API_KEY` gets,
+and it is the reason the duplication exists. It can be deleted the day
+persistence stops being optional.
 
 ## Server limits and defences
 
@@ -122,18 +152,17 @@ end is inspectable by any 8-year-old with a curious finger.
 
 | Where | Defence |
 | --- | --- |
-| [app/api/scene/route.ts](../app/api/scene/route.ts) | Ceiling of 60 generations per hour, per `x-forwarded-for`, in a `Map` in the process memory. |
-| [app/api/scene/route.ts](../app/api/scene/route.ts) | `z.strictObject` on the body: an extra field is a 400, not an ignored field. |
+| [lib/scene-route.ts](../lib/scene-route.ts) | Ceiling of 60 generations per hour. Counted in Postgres per guardian where there is an archive; in a `Map` per IP where there is not. |
+| [lib/scene-route.ts](../lib/scene-route.ts) | No session, no scene — on a deployment with an archive. Otherwise this is a free model endpoint. |
+| [lib/scene-route.ts](../lib/scene-route.ts) | The beat is derived from the parent scene, so a client cannot ask for the last beat first. |
+| [supabase/schema.sql](../supabase/schema.sql) | RLS. Every query runs as the signed-in adult; another family's row comes back as no row. |
+| [lib/scene-route.ts](../lib/scene-route.ts) | `z.strictObject` on the body: an extra field is a 400, not an ignored field. |
 | [lib/scene-route.ts](../lib/scene-route.ts) | The seed is an id from a closed list, resolved server-side: a child's own prose never reaches the prompt. An unknown `bible_id` is a 400. |
 | [lib/scene-route.ts](../lib/scene-route.ts) | The world round-trips through the browser, so it is re-validated on the way back in — same caps as the output schema. |
 | [lib/schema.ts](../lib/schema.ts) | `validateScene` checks the schema **and** the choice-count rule per beat. |
 | [lib/generate-scene.ts](../lib/generate-scene.ts) | `stop_reason` `refusal` and `max_tokens` become explicit errors, not a half-baked scene. |
 | [lib/generate-scene.ts](../lib/generate-scene.ts) | Error detail only in the server log; the client gets a code (`generation-failed`). |
 | [lib/anthropic.ts](../lib/anthropic.ts) | The client only exists in server code. The key never reaches the browser. |
-
-The ceiling in a `Map` in process memory works with a single instance. With more
-than one, each counts its own — it needs to move to Redis or Supabase (there is a
-`TODO` in the code).
 
 ## Model configuration
 
@@ -160,6 +189,7 @@ In [lib/anthropic.ts](../lib/anthropic.ts):
 | [lib/types.ts](../lib/types.ts) | `Beat`, `Scene`, `SceneRequest`, `ReadingLevel`. |
 | [lib/stream-json.ts](../lib/stream-json.ts) | Extracts the text from the partial JSON and splits it into sentences. |
 | [lib/generate-scene.ts](../lib/generate-scene.ts) | The call to the model, with cache and streaming. |
+| [lib/fake-scene.ts](../lib/fake-scene.ts) | The same events, from canned prose. Development without a key — `FAKE_MODEL=1`. |
 | [lib/sse.ts](../lib/sse.ts) | The client's SSE reader. |
 | [lib/audio.ts](../lib/audio.ts) | iOS unlock for both `speechSynthesis` and the `AudioContext`, on the one user gesture. |
 | [lib/tts/voices.ts](../lib/tts/voices.ts) | The voice catalogue: a voice is a character, and its id outlives any provider. |
@@ -167,4 +197,7 @@ In [lib/anthropic.ts](../lib/anthropic.ts):
 | [lib/tts/speaker.ts](../lib/tts/speaker.ts) | The device voice, over `speechSynthesis`. |
 | [app/api/scene/route.ts](../app/api/scene/route.ts) | SSE route + generation ceiling. |
 | [components/story.tsx](../components/story.tsx) | All the UI and the path state. |
+| [lib/supabase/](../lib/supabase/) | The two clients, the table types, and the one place snake_case becomes camelCase. |
+| [lib/archive.ts](../lib/archive.ts) | Every query the app makes. Takes the client rather than reaching for one. |
+| [components/shell.tsx](../components/shell.tsx) | Which of the three screens a family is on: the door, the child, the story. |
 | [supabase/schema.sql](../supabase/schema.sql) | The scene graph, with RLS. |

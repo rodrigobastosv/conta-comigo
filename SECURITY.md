@@ -20,8 +20,11 @@ of the usual web flaws, we treat these as vulnerabilities:
   — a `NEXT_PUBLIC_*` variable, a log, an error message returned to the client —
   is a flaw, not a style issue.
 - **Bypassing the generation ceiling.** The limit lives on the server, in
-  [app/api/scene/route.ts](app/api/scene/route.ts). Any way of blowing up API cost
-  by getting around that ceiling counts as a vulnerability.
+  [lib/scene-route.ts](lib/scene-route.ts), and is counted by
+  `claim_generation()` under a key the caller does not choose. Any way of blowing
+  up API cost by getting around that ceiling counts as a vulnerability — as does
+  reaching `POST /api/scene` without a session on a deployment that has an
+  archive, which would make it a free model endpoint.
 - **Prompt injection that breaks the narrator's limits.** If a client-controlled
   field (`helperName`, `choiceMade`, `facts`) makes the model violate the
   constitution's LIMITES INVIOLÁVEIS — see

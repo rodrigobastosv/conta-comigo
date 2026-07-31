@@ -67,19 +67,21 @@ The reasoning, the tier comparison and the `pt-BR-Neural2-*` escape hatch are in
 
 ## Persistence
 
-[supabase/schema.sql](../supabase/schema.sql) is written and has RLS, and the app
-does not write to it. Today the path lives in `useState` and reloading the page
-loses everything.
+Done. The adult signs in with an e-mail and a password, RLS is the boundary, and
+every validated scene is stored in the graph. The route owns the story's history:
+the client sends the parent scene's id and the server climbs `scene_path()` for
+the facts, reads the world and the helper's name off the story row, and derives
+the beat from the parent instead of believing it. A scene that already exists for
+a (parent, choice) is replayed rather than regenerated, and a story can be picked
+up where it stopped or read start to finish.
 
-Missing: storing the scene and reading the path back, and using `scene_path()` to
-assemble the facts instead of accumulating them in the client. An invented world
-also has to land in `stories.world`, or a re-read comes back in no world at all —
-today it lives in `useState` next to the path and dies with the tab. Respecting
-`scenes_parent_choice`: if the scene for that (parent, choice) pair already
-exists, reuse it instead of regenerating.
+**With no Supabase variables the app is exactly what it was before any of this**:
+no sign-in, one session, a reload loses the path. That is the second column of the
+table in [architecture.md](architecture.md#two-ways-through-the-route), and the
+duplication it describes can be deleted the day persistence stops being optional.
 
-It is what turns "one session" into "the archive grows" — the premise of the
-product.
+Missing: nothing required. `profiles.preferred_voice` is still not read or
+written, which waits on parents' mode — see below.
 
 ## Speculative pre-generation
 
@@ -96,10 +98,16 @@ for when she comes back and takes the other path.
 History of what has been read, and per-profile restrictions (fears to avoid,
 forbidden names).
 
-Ready: the `profiles.restrictions` column, the `extraRestrictions` field in
-`SceneRequest`, and the passage in `buildRequest` that injects those restrictions
-into the prompt with the instruction to obey without mentioning them. Only the UI
-and the authentication are missing.
+Ready, and now further along than it was: authentication exists, profiles exist
+and are created in the UI, and **the restrictions already reach the prompt from
+the server** — the route reads `profiles.restrictions` and passes them as
+`extraRestrictions`, which is where they have to be read from, since a restriction
+a client can drop from a request is not a restriction.
+
+Missing: anything that writes that column. There is no screen where a parent types
+"cachorros grandes", no history view, no way to delete a profile, and no check of
+forbidden names at the helper-name input — which has to happen there too, not only
+in the prompt.
 
 ## Evaluation set
 
@@ -141,9 +149,22 @@ shop](../lib/story-bibles/loja-de-coisas-perdidas.ts), written by hand, and
 [original](../lib/story-bibles/original.ts), where the model invents the world on
 beat 1 from a charter. Adding a third is adding a file and an entry.
 
-Missing: a second **hand-written** world. The charter buys variety, not the kind
-of specificity Dona Vitória has, and the roadmap item that mattered here was
-always "a world someone loved writing".
+Three worlds ship now. The second hand-written one is [the circus that builds
+itself](../lib/story-bibles/circo-que-monta-sozinho.ts), and it exists for a
+reason that is not plumbing: the shop has no clock. Its engine is a question, and
+the constitution permits exactly one tension — *"será que vai dar tempo?"* — that
+no world was using. Here something is missing and the circus opens at dawn either
+way, so the hurry is enjoyable because both endings are good.
+
+[registry.test.ts](../lib/story-bibles/registry.test.ts) iterates the registry and
+asserts what `Record<Beat, string>` cannot: a real instruction per beat, a final
+beat that says "sem escolhas", a refrain present in layer 2 for a hand-written
+world and absent for an invented one.
+
+Missing: **the circus has no baseline.** Three cases were added to the evaluation
+set and never run against the real model, so its numbers are unknown and the v3
+baseline covers fourteen cases, not seventeen. Run `npm run eval` before trusting
+anything about how this world reads.
 
 ## Illustrations
 
@@ -153,8 +174,9 @@ than it looks.
 
 ## Known technical debt
 
-- **Generation ceiling in memory.** Only correct with one instance. See
-  [decisions.md](decisions.md#the-generation-ceiling-is-on-the-server).
 - **The route's own file is untested.** `lib/scene-route.ts` carries the logic and
-  is covered; `app/api/scene/route.ts` is four lines of Next wiring on top of it
+  is covered; `app/api/scene/route.ts` is a few lines of Next wiring on top of it
   and is not.
+- **The table types are hand-written.** [lib/supabase/types.ts](../lib/supabase/types.ts)
+  mirrors `supabase/schema.sql` by hand, and a stale type file is worse than none.
+  Change both in the same commit, or swap it for the generator's output.

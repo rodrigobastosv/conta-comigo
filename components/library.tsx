@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { bookUpTo, finishedStories, type StoryRead } from "@/lib/archive";
 import { supabase } from "@/lib/supabase/browser";
-import { Pisca } from "./pisca";
+import { companionById } from "./companions";
 
 /**
  * The little book: stories that finished, read back the way they happened.
@@ -29,10 +29,12 @@ type Page = {
 
 export function Library({
   profileId,
+  companionId,
   intent,
   onLeave,
 }: {
   profileId: string;
+  companionId: string | null;
   /** Which button opened this: the list is the same, the verb is not. */
   intent: "library" | "share";
   onLeave: () => void;
@@ -148,7 +150,7 @@ export function Library({
 
       {stories?.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-10 text-center">
-          <Pisca size={96} mood="asleep" />
+          {companionById(companionId).Drawing({ size: 96, mood: "asleep" })}
           <p className="text-lg text-muted">
             Nenhuma história terminada ainda.
             <br />

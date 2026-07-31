@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   branchTo,
   isForbiddenName,
+  updateChoices,
   type ChildProfile,
   type StoryRead,
 } from "@/lib/archive";
@@ -69,11 +70,20 @@ export function Story({
   profile,
   resumeEntry = null,
   onHome,
+  trail = null,
 }: {
   profile: ChildProfile | null;
   /** A story to pick up immediately, chosen on the home screen. */
   resumeEntry?: StoryRead | null;
   onHome?: () => void;
+  /**
+   * The navigation trail, rendered only on the start form.
+   *
+   * Handed in rather than built here so that this component owns the one thing
+   * it actually knows: once a scene begins, the story is full-screen and
+   * uninterrupted, and the trail is gone.
+   */
+  trail?: React.ReactNode;
 }) {
   const [phase, setPhase] = useState<Phase>("start");
   const [name, setName] = useState("");
@@ -162,7 +172,17 @@ export function Story({
          * answered: there the device voice stands, because nothing was learned.
          */
         setVoices(offered);
-        if (offered.length > 0) setVoiceId(preferredVoice(offered).id);
+        if (offered.length > 0) {
+          /**
+           * Her own choice wins, when this deployment can still speak it.
+           *
+           * `preferredVoice` picks the best available; a stored id that is no
+           * longer offered — a key removed, a voice retired — falls through to
+           * it rather than leaving the story silent.
+           */
+          const stored = offered.find((v) => v.id === profile?.preferredVoice);
+          setVoiceId((stored ?? preferredVoice(offered)).id);
+        }
       } catch {
         // Offline, or the route is not there. The device voice stands.
       }
@@ -171,7 +191,9 @@ export function Story({
     return () => {
       cancelled = true;
     };
-  }, []);
+    // Only the profile's stored id matters here, and it does not change while
+    // this screen is mounted.
+  }, [profile?.preferredVoice]);
 
   /** Stop the voice now. Says nothing about whether narration stays on. */
   const silence = useCallback(() => {
@@ -461,6 +483,7 @@ export function Story({
 
       {phase === "start" && (
         <section className="flex flex-1 flex-col justify-center gap-6">
+          {trail}
           <label className="flex flex-col gap-2">
             <span className="text-lg">
               Como você quer se chamar nessa história?
@@ -568,7 +591,18 @@ export function Story({
                 <button
                   key={option.id}
                   type="button"
-                  onClick={() => setVoiceId(option.id)}
+                  onClick={() => {
+                    setVoiceId(option.id);
+                    // Remembered, so the family does not re-pick a narrator
+                    // every single night. Failing to save is not worth an
+                    // error: the voice still applies to this story.
+                    const db = supabase();
+                    if (db && profile) {
+                      void updateChoices(db, profile.id, {
+                        preferredVoice: option.id,
+                      });
+                    }
+                  }}
                   aria-pressed={voiceId === option.id}
                   className={`rounded-xl border-2 px-4 py-3 text-left text-lg transition ${
                     voiceId === option.id

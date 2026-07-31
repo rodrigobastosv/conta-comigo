@@ -1,16 +1,18 @@
 /**
  * Pisca, a vaga-lume.
  *
- * **Pisca is not the narrator, and this is the load-bearing rule.** The
- * constitution says the narrator is not a friend, not an assistant, not a
- * character who talks to the child, and never refers to itself — that is why
- * this product is a book rather than a chatbot with a face on it. A mascot that
- * greeted the child or reacted to her choices would quietly undo it.
+ * **Pisca is the child's friend, and is not the narrator.** Those are two
+ * different beings, and the constitution's "not a friend, not a character who
+ * talks to the child" governs the *narrator* — the voice that reads the story.
+ * It does not forbid this product from having a friend in it.
  *
- * So Pisca is furniture of the *app*, never of the *story*: the home screen,
- * the empty shelf, the wait before a scene, the end of the night. It never
- * appears inside a scene, never speaks in the first person, and never comments
- * on a choice. See docs/story-bible.md.
+ * What it does require is that the seam between the two stays perceptible. A
+ * five-year-old has no mental model of "narrator" versus "mascot"; she has what
+ * she hears. So Pisca never appears during a scene, never sounds like the voice
+ * that just finished reading, and never comments on the story or on a choice —
+ * "que legal que você abriu a porta azul" is the narrator becoming a character,
+ * while "quer guardar essa?" is a friend asking about the app. See
+ * docs/story-bible.md.
  *
  * A firefly rather than an owl, and rather than a character from any world: the
  * shop already has Farelo and the circus has Pipoca, and a mascot borrowed from

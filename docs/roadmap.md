@@ -48,10 +48,9 @@ Google's Chirp3-HD wherever `GOOGLE_TTS_API_KEY` is set.** Measured in a real
 browser: the first sentence starts speaking 6.4 s before the scene finishes
 generating.
 
-Missing: nothing required. What is left is optional and measured, not assumed —
-`profiles.preferred_voice` is still not read or written (the picker's choice
-lives in `useState` and resets on reload, which waits on parents' mode, issue
-#16), and ElevenLabs has no adapter because no voice is cast on it.
+Missing: nothing required. The picker's choice is now stored on
+`profiles.preferred_voice`, so a family casts the narrator once. ElevenLabs has
+no adapter because no voice is cast on it.
 
 The project constraint: **first sound in 1–2 s**, playing sentence 1 while
 sentence 3 is still being generated. Generating the whole scene's audio once it is
@@ -80,8 +79,7 @@ no sign-in, one session, a reload loses the path. That is the second column of t
 table in [architecture.md](architecture.md#two-ways-through-the-route), and the
 duplication it describes can be deleted the day persistence stops being optional.
 
-Missing: nothing required. `profiles.preferred_voice` is still not read or
-written, which waits on parents' mode — see below.
+Missing: nothing required.
 
 ## Speculative pre-generation
 
@@ -124,9 +122,13 @@ check so the child hears "escolhe outro" instead of watching a story fail to sta
 for a reason nobody explained. They also reach the prompt, or the model stays free
 to hand the name to a character.
 
-Missing: `profiles.preferred_voice` is still not read or written — the voice
-picker's choice lives in `useState` and resets on reload. That is the last
-unattached wire in the schema.
+Done: `profiles.preferred_voice` is read and written — a family picks the
+narrator once rather than every night, and a stored voice this deployment can no
+longer speak falls back instead of going silent. `profiles.preferred_companion`
+joins it: who reads the story and who waits on the home screen are two columns
+on purpose, because a friend who reads the story has become the narrator.
+
+Missing: nothing unattached in the schema.
 
 ## Evaluation set
 

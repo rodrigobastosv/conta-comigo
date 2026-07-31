@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { childProfiles, createProfile, type ChildProfile } from "@/lib/archive";
+import {
+  childProfiles,
+  createProfile,
+  updateChoices,
+  type ChildProfile,
+} from "@/lib/archive";
 import { supabase } from "@/lib/supabase/browser";
 import type { ReadingLevel } from "@/lib/types";
+import { COMPANIONS, DEFAULT_COMPANION_ID, companionById } from "./companions";
 
 /**
  * Who is listening tonight.
@@ -73,12 +79,15 @@ export function Children({
             key={child.id}
             type="button"
             onClick={() => onPicked(child)}
-            className="rounded-2xl border-2 border-ink/15 bg-white/60 px-5 py-5 text-left text-2xl active:border-shop active:bg-shop/10"
+            className="flex items-center gap-4 rounded-2xl border-2 border-edge bg-card px-5 py-5 text-left text-2xl transition active:scale-[0.98]"
           >
-            {child.nickname}
-            <span className="block text-base text-shop/70">
-              {child.age} anos ·{" "}
-              {child.readingLevel === "ouvir" ? "quer ouvir" : "quer ler"}
+            {companionById(child.preferredCompanion).Drawing({ size: 56 })}
+            <span>
+              <span className="block">{child.nickname}</span>
+              <span className="block text-base text-muted">
+                {child.age} anos ·{" "}
+                {child.readingLevel === "ouvir" ? "quer ouvir" : "quer ler"}
+              </span>
             </span>
           </button>
         ))}
@@ -107,6 +116,7 @@ function NewChild({
   const [nickname, setNickname] = useState("");
   const [age, setAge] = useState(5);
   const [level, setLevel] = useState<ReadingLevel>("ouvir");
+  const [companion, setCompanion] = useState(DEFAULT_COMPANION_ID);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -124,12 +134,18 @@ function NewChild({
       readingLevel: level,
     });
 
-    setBusy(false);
     if (!child) {
+      setBusy(false);
       setError("Não deu pra salvar agora. Tente de novo.");
       return;
     }
-    onCreated(child);
+
+    // The friend is a second write rather than part of the insert: a profile
+    // that exists without a companion is fine (it falls back to Pisca), and a
+    // child with no profile because her friend failed to save is not.
+    await updateChoices(db, child.id, { preferredCompanion: companion });
+    setBusy(false);
+    onCreated({ ...child, preferredCompanion: companion });
   }
 
   return (
@@ -179,6 +195,32 @@ function NewChild({
             {option === "ouvir" ? "Quer ouvir" : "Quer ler"}
           </button>
         ))}
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-2 text-lg">Quem vai ficar com ela?</legend>
+        {/* Chosen by the drawing, like everything else a child picks here. The
+            silhouettes differ, not just the colours — a palette-only choice
+            disappears for a colour-blind child. */}
+        <div className="grid grid-cols-2 gap-3">
+          {COMPANIONS.map((one) => (
+            <button
+              key={one.id}
+              type="button"
+              onClick={() => setCompanion(one.id)}
+              aria-pressed={companion === one.id}
+              className={`flex flex-col items-center gap-1 rounded-2xl border-2 px-3 py-4 text-center transition active:scale-[0.98] ${
+                companion === one.id
+                  ? "border-shop bg-shop/10"
+                  : "border-edge bg-card"
+              }`}
+            >
+              <one.Drawing size={72} />
+              <span className="text-lg">{one.name}</span>
+              <span className="text-sm text-muted">{one.description}</span>
+            </button>
+          ))}
+        </div>
       </fieldset>
 
       <button

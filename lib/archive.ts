@@ -63,6 +63,7 @@ export type ChildProfile = {
   age: number;
   readingLevel: ReadingLevel;
   preferredVoice: string | null;
+  preferredCompanion: string | null;
   restrictions: string[];
   forbiddenNames: string[];
 };
@@ -74,6 +75,7 @@ function asProfile(row: ProfileRow): ChildProfile {
     age: row.age,
     readingLevel: row.reading_level,
     preferredVoice: row.preferred_voice,
+    preferredCompanion: row.preferred_companion,
     restrictions: row.restrictions,
     forbiddenNames: row.forbidden_names ?? [],
   };
@@ -265,6 +267,36 @@ export function isForbiddenName(name: string, forbidden: string[]): boolean {
 
   const wanted = flatten(name);
   return forbidden.some((entry) => flatten(entry) === wanted);
+}
+
+/**
+ * What this child picked: who reads to her, and who waits on the home screen.
+ *
+ * Two ids rather than one. A friend who reads the story has become the
+ * narrator, which is the line docs/story-bible.md draws — so the columns stay
+ * apart even though the same screen sets both.
+ */
+export async function updateChoices(
+  db: Db,
+  profileId: string,
+  choices: { preferredVoice?: string; preferredCompanion?: string },
+): Promise<boolean> {
+  // Typed against the row rather than a loose record, so a renamed column is a
+  // compile error here and not a silently ignored update at runtime.
+  const patch: Partial<ProfileRow> = {};
+  if (choices.preferredVoice) patch.preferred_voice = choices.preferredVoice;
+  if (choices.preferredCompanion) {
+    patch.preferred_companion = choices.preferredCompanion;
+  }
+  if (Object.keys(patch).length === 0) return true;
+
+  const { error } = await db.from("profiles").update(patch).eq("id", profileId);
+
+  if (error) {
+    console.error("[archive] could not save the choices", error.message);
+    return false;
+  }
+  return true;
 }
 
 export async function updateLimits(

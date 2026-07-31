@@ -34,6 +34,7 @@ export type ProfileRow = {
   age: number;
   reading_level: "ouvir" | "ler";
   preferred_voice: string | null;
+  preferred_companion: string | null;
   restrictions: string[];
   forbidden_names: string[];
   created_at: string;
@@ -86,6 +87,7 @@ type ProfileInsert = {
   age: number;
   reading_level: "ouvir" | "ler";
   preferred_voice?: string | null;
+  preferred_companion?: string | null;
   restrictions?: string[];
   forbidden_names?: string[];
 };

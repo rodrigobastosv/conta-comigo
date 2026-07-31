@@ -484,6 +484,41 @@ The in-memory `Map` is still there for the one case it is correct in: a
 deployment with no Supabase variables, keyed by IP. That is a contributor's
 laptop, which is one process by definition.
 
+## Dark mode is a feature, not a preference
+
+The product is a bedtime story. `#fdf6e8` is warm paper at four in the afternoon
+and a flashlight at half past eight in a dark bedroom, which is the lighting
+this app is actually used in.
+
+So there are two palettes and neither is the other inverted: the dark one is a
+warm dark (`#1a1613`) rather than black, and the accent is lifted from `#b5541f`
+to `#e8834a` because the original is unreadable on it. Inverting the light
+palette mechanically would have produced a blue glare — the one thing a bedtime
+screen must not be.
+
+**The theme is applied by a blocking inline script in the document head**, not by
+an effect. An effect renders the default palette first and corrects it a frame
+later, which in a dark room is a white flash at a child who was nearly asleep.
+That is the whole reason for the `dangerouslySetInnerHTML` in the layout, and it
+is why the theme is read with `useSyncExternalStore` rather than mirrored into
+`useState`.
+
+## Sharing sends text, not a link
+
+The share button hands the story to the phone's own share sheet as plain text.
+Nothing is published, no URL exists, no row changes, and the app never learns
+where it went.
+
+Everything else in this product is scoped to one signed-in adult by RLS.
+Sharing, by definition, is not — and these stories are written *for* a named
+child, usually with her own chosen name inside them. A public link is a better
+product and a much larger decision: a read path around RLS, a token column, a
+revoke path, and an answer about the child's name. It is issue #35 and it should
+be argued on its own rather than smuggled in behind a button.
+
+What shipped is the version that cannot leak anything the parent did not
+personally send.
+
 ## The unit of cost is one story
 
 Not one token, not one scene. Nobody can hold "$5 per million input tokens" in

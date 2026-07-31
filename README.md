@@ -128,13 +128,18 @@ Details in [docs/architecture.md](docs/architecture.md).
 
 Works end to end: generates all five scenes, branches, goes back one scene and
 takes the other path, reads itself aloud, and — where Supabase is configured —
-stores every scene, picks a story back up after a reload, and never regenerates a
-scene that already exists.
+signs the adult in, stores every scene, picks a story back up after a reload,
+never regenerates a scene that already exists, reads a finished story back, and
+shares it. Light and dark, because it is used at bedtime.
 
-Does not exist yet: parents' mode (restrictions reach the prompt, but nothing sets
-them yet); illustrations in place of the emoji; speculative pre-generation. See
-[docs/roadmap.md](docs/roadmap.md), and the GitHub issues for the sequenced
-version of that list.
+**A story costs about 8.3¢** in `ouvir` and 12.1¢ in `ler` — that is the unit
+this project argues in, and `npm run cost` is what measures it. See
+[docs/decisions.md](docs/decisions.md#the-unit-of-cost-is-one-story).
+
+Does not exist yet: illustrations in place of the emoji; speculative
+pre-generation (costed, and blocked on a measurement rather than on code);
+sharing as a link rather than as text. See [docs/roadmap.md](docs/roadmap.md),
+and the GitHub issues for the sequenced version of that list.
 
 ## Contributing
 

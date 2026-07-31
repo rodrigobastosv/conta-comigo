@@ -199,5 +199,10 @@ In [lib/anthropic.ts](../lib/anthropic.ts):
 | [components/story.tsx](../components/story.tsx) | All the UI and the path state. |
 | [lib/supabase/](../lib/supabase/) | The two clients, the table types, and the one place snake_case becomes camelCase. |
 | [lib/archive.ts](../lib/archive.ts) | Every query the app makes. Takes the client rather than reaching for one. |
-| [components/shell.tsx](../components/shell.tsx) | Which of the three screens a family is on: the door, the child, the story. |
+| [components/shell.tsx](../components/shell.tsx) | Which screen a family is on: the door, the child, the home, and everything reachable from it. |
+| [components/home.tsx](../components/home.tsx) | The four things there are to do. A story is one of them, not the landing page. |
+| [components/library.tsx](../components/library.tsx) | The little book, and sharing it as text. |
+| [components/pisca.tsx](../components/pisca.tsx) | The mascot and the wordmark. **Never rendered inside a scene** — see docs/story-bible.md. |
+| [components/theme.tsx](../components/theme.tsx) | Light and dark, applied before paint. |
+| [lib/cost.ts](../lib/cost.ts) | What a story costs. The unit every cost argument here uses. |
 | [supabase/schema.sql](../supabase/schema.sql) | The scene graph, with RLS. |

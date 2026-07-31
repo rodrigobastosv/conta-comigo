@@ -4,13 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   branchTo,
   isForbiddenName,
-  resumableStories,
   type ChildProfile,
   type StoryRead,
 } from "@/lib/archive";
 import { unlockAudio } from "@/lib/audio";
 import { readSSE } from "@/lib/sse";
 import { supabase } from "@/lib/supabase/browser";
+import { Pisca } from "./pisca";
 import { sentenceRange } from "@/lib/tts/highlight";
 import { PlaybackQueue } from "@/lib/tts/queue";
 import { BIBLES, DEFAULT_BIBLE_ID, bibleById } from "@/lib/story-bibles";
@@ -65,7 +65,16 @@ async function authorization(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export function Story({ profile }: { profile: ChildProfile | null }) {
+export function Story({
+  profile,
+  resumeEntry = null,
+  onHome,
+}: {
+  profile: ChildProfile | null;
+  /** A story to pick up immediately, chosen on the home screen. */
+  resumeEntry?: StoryRead | null;
+  onHome?: () => void;
+}) {
   const [phase, setPhase] = useState<Phase>("start");
   const [name, setName] = useState("");
   const [level, setLevel] = useState<ReadingLevel>(
@@ -83,8 +92,6 @@ export function Story({ profile }: { profile: ChildProfile | null }) {
   const [partial, setPartial] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
-  /** Stories this child can pick up again. Empty where there is no archive. */
-  const [resumable, setResumable] = useState<StoryRead[]>([]);
 
   const [narrating, setNarrating] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -165,28 +172,6 @@ export function Story({ profile }: { profile: ChildProfile | null }) {
       cancelled = true;
     };
   }, []);
-
-  /**
-   * The stories waiting to be continued.
-   *
-   * Read straight from the browser rather than through a route: RLS is what
-   * decides which rows come back, so a route would add a round trip and no
-   * safety. Reloaded whenever the child returns to the start screen, so a story
-   * finished a minute ago stops being offered.
-   */
-  useEffect(() => {
-    const db = supabase();
-    if (!db || !profile || phase !== "start") return;
-
-    let cancelled = false;
-    void resumableStories(db, profile.id).then((found) => {
-      if (!cancelled) setResumable(found.filter((entry) => entry.tip));
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [profile, phase]);
 
   /** Stop the voice now. Says nothing about whether narration stays on. */
   const silence = useCallback(() => {
@@ -360,6 +345,23 @@ export function Story({ profile }: { profile: ChildProfile | null }) {
     setPhase(branch[branch.length - 1].beat === FINAL_BEAT ? "end" : "reading");
   }
 
+  /**
+   * A story chosen on the home screen, picked up once.
+   *
+   * Keyed on the entry's id rather than run on mount: the same component stays
+   * mounted while the family moves between stories, and re-running this on
+   * every render would restart the story under the child's finger.
+   */
+  const resumed = useRef<string | null>(null);
+  useEffect(() => {
+    if (!resumeEntry || resumed.current === resumeEntry.story.id) return;
+    resumed.current = resumeEntry.story.id;
+    void resume(resumeEntry);
+    // `resume` is redefined every render and is not a dependency worth chasing;
+    // the ref above is what makes this run exactly once per story.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeEntry]);
+
   function begin() {
     /**
      * The same rule as the server's, said nicely.
@@ -451,39 +453,14 @@ export function Story({ profile }: { profile: ChildProfile | null }) {
 
   return (
     <>
-      <header className="mb-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-shop/70">
-          Conta Comigo
-        </p>
-        <h1 className="mt-1 text-2xl font-normal">{headerTitle}</h1>
-      </header>
+      {headerTitle && (
+        <header className="mb-6">
+          <h1 className="text-2xl font-normal">{headerTitle}</h1>
+        </header>
+      )}
 
       {phase === "start" && (
         <section className="flex flex-1 flex-col justify-center gap-6">
-          {/* First, before anything to fill in: a story already begun is one
-              tap, and a five-year-old should not have to read a list to find
-              it. Big targets, few of them, the title she named it. */}
-          {resumable.length > 0 && (
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-2 text-lg">Continuar de onde parou</legend>
-              <div className="grid gap-3">
-                {resumable.map((entry) => (
-                  <button
-                    key={entry.story.id}
-                    type="button"
-                    onClick={() => void resume(entry)}
-                    className="rounded-2xl border-2 border-shop bg-white/60 px-5 py-5 text-left text-xl active:bg-shop/10"
-                  >
-                    {entry.story.world?.title ?? entry.story.title}
-                    <span className="block text-base text-shop/70">
-                      parou na cena {entry.tip?.beat} de {FINAL_BEAT}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          )}
-
           <label className="flex flex-col gap-2">
             <span className="text-lg">
               Como você quer se chamar nessa história?
@@ -617,6 +594,16 @@ export function Story({ profile }: { profile: ChildProfile | null }) {
             Começar a história
           </button>
 
+          {onHome && (
+            <button
+              type="button"
+              onClick={onHome}
+              className="self-center text-lg text-shop underline"
+            >
+              Voltar
+            </button>
+          )}
+
           {error && <p className="text-center text-shop">{error}</p>}
         </section>
       )}
@@ -654,6 +641,18 @@ export function Story({ profile }: { profile: ChildProfile | null }) {
 
       {(phase === "generating" || phase === "reading" || phase === "end") && (
         <section className="flex flex-1 flex-col gap-8">
+          {/* The one empty moment in the story view: the model is thinking and
+              there is no prose yet, so there is no narrator for Pisca to be
+              confused with. It goes the instant the first token lands — a
+              mascot beside a scene would make the narrator a character, which
+              the constitution forbids. See components/pisca.tsx. */}
+          {generating && !textOnScreen && (
+            <div className="flex flex-col items-center gap-3 py-10">
+              <Pisca size={112} mood="glowing" />
+              <p className="text-lg text-muted">Começando a história…</p>
+            </div>
+          )}
+
           <p className="whitespace-pre-wrap text-xl leading-relaxed md:text-2xl">
             {range ? (
               <>

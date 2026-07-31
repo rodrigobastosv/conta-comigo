@@ -1,9 +1,5 @@
 import { generateScene } from "../lib/generate-scene.ts";
-import {
-  costOfScene,
-  inCents,
-  storiesInsideFreeNarration,
-} from "../lib/cost.ts";
+import { storiesInsideFreeNarration } from "../lib/cost.ts";
 import { LOST_THINGS_SHOP } from "../lib/story-bibles/index.ts";
 import type { Beat, Scene, SceneRequest, ReadingLevel } from "../lib/types.ts";
 
@@ -20,7 +16,6 @@ const bibleId = process.argv[3] ?? LOST_THINGS_SHOP.id;
 let facts: string[] = [];
 let choice: string | null = null;
 let characters = 0;
-const costs = [];
 
 for (const beat of [1, 2, 3, 4, 5] as Beat[]) {
   const request: SceneRequest = {

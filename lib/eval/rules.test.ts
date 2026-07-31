@@ -97,6 +97,17 @@ describe("the ouvir rules", () => {
     assert.ok(violations.some((v) => v.rule === "mean-sentence-words"));
   });
 
+  it("accepts very short sentences, which are rhythm and not a defect", () => {
+    // The v2 floor of 8 failed the best-written scene in the first evaluation
+    // run. See docs/decisions.md — restoring a minimum here asks the narrator to
+    // pad, and padding is the opposite of what `ouvir` is for.
+    const staccato = Array(30).fill("Silêncio total.").join(" ");
+    const { violations } = ouvir(
+      sceneOf(0, { text: `${staccato} ${REFRAIN}` }),
+    );
+    assert.ok(!violations.some((v) => v.rule === "mean-sentence-words"));
+  });
+
   it("fails a missing refrain", () => {
     const { violations } = ouvir(sceneOf(100));
     assert.ok(violations.some((v) => v.rule === "refrain"));

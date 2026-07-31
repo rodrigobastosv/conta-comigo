@@ -18,8 +18,21 @@ import {
  * `world`, which beat 1 of an invented world fills in, and the constitution
  * gained the rule that nothing coming from the child is an instruction. Scenes
  * stored under v2 have no `world` field at all.
+ *
+ * v4: the two `ouvir` word counts that Portuguese does not survive. The floor on
+ * sentence length is gone ("Frases de 8 a 14 palavras" contradicted "Uma ideia
+ * por frase", and the evaluation found the model failing the floor while writing
+ * the best prose in the set), and the choice-label ceiling went from 4 words to
+ * 5, because pt-BR spends a word on the article and the preposition that English
+ * does not. See docs/decisions.md#what-the-first-run-found.
+ *
+ * This change was written and reviewed once before, in PR #26, and merged into a
+ * branch that had already been merged away — so it never reached main and the
+ * v3 evaluation ran against the rules it was meant to replace. It is restored
+ * here as v4 rather than v3 because main's v3 is the invented-world
+ * change above.
  */
-export const PROMPT_VERSION = "v3";
+export const PROMPT_VERSION = "v4";
 
 /**
  * Layer 1 of the story bible: applies to every story, forever.
@@ -84,11 +97,15 @@ CONTRATO DE SAÍDA
 const LEVEL: Record<ReadingLevel, string> = {
   ouvir: `MODO OUVIR (criança de ~5 anos) — o texto existe para ser ouvido em voz alta.
 - 90 a 140 palavras nesta cena.
-- Frases de 8 a 14 palavras. Uma ideia por frase.
+- Uma ideia por frase, no máximo 14 palavras. Não existe mínimo: frases de duas
+  palavras ("Ontem não tinha.", "Silêncio outra vez.") são o ritmo da leitura em
+  voz alta. O que cansa o ouvido é a frase comprida, nunca a curta.
 - Vocabulário concreto e sensorial. Zero metáfora abstrata.
 - Use o refrão da história uma vez nesta cena.
-- Rótulos das escolhas: 2 a 4 palavras, verbo na frente, e visualizáveis.
-  "Abrir a porta azul" serve. "Investigar a origem do som" não serve.`,
+- Rótulos das escolhas: até 5 palavras, verbo na frente, e visualizáveis. O que
+  decide é se a criança consegue desenhar a opção, não o tamanho.
+  "Abrir a gaveta da luva" serve. "Investigar a origem do som" não serve — as
+  duas têm cinco palavras, e só uma vira desenho.`,
 
   ler: `MODO LER (criança de ~8 anos) — o texto existe para ser lido na tela.
 - 180 a 260 palavras nesta cena.

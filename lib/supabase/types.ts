@@ -35,6 +35,7 @@ export type ProfileRow = {
   reading_level: "ouvir" | "ler";
   preferred_voice: string | null;
   restrictions: string[];
+  forbidden_names: string[];
   created_at: string;
 };
 
@@ -86,6 +87,7 @@ type ProfileInsert = {
   reading_level: "ouvir" | "ler";
   preferred_voice?: string | null;
   restrictions?: string[];
+  forbidden_names?: string[];
 };
 
 type StoryInsert = {

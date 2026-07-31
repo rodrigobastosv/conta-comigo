@@ -2,11 +2,13 @@ import { z } from "zod";
 // Relative, with the extension: `npm test` runs this through node's strip-only
 // type stripping, which does not resolve the `@/` tsconfig alias.
 import {
+  asPromptRestrictions,
   claimGeneration,
   endStory,
   factsUpTo,
+  isForbiddenName,
+  limitsFor,
   nameWorld,
-  restrictionsFor,
   sceneById,
   siblingFor,
   startStory,
@@ -299,6 +301,15 @@ async function fromArchive(db: Db, body: Body): Promise<Resolved> {
   const seed = body.seedId ? (seedById(body.seedId)?.prompt ?? null) : null;
 
   if (body.beat === 1) {
+    const limits = await limitsFor(db, body.profileId!);
+
+    // Checked here and not only in the prompt. Telling the model to avoid a name
+    // is no use if the child can type it in as the hero, and the rule is that
+    // content limits live on the server.
+    if (isForbiddenName(body.helperName, limits.forbiddenNames)) {
+      return { error: "forbidden-name", status: 400 };
+    }
+
     const started = await startStory(db, {
       profileId: body.profileId!,
       bibleId: body.bibleId,
@@ -324,7 +335,7 @@ async function fromArchive(db: Db, body: Body): Promise<Resolved> {
         world: null,
         facts: [],
         choiceMade: null,
-        extraRestrictions: await restrictionsFor(db, body.profileId!),
+        extraRestrictions: asPromptRestrictions(limits),
       },
     };
   }
@@ -366,7 +377,9 @@ async function fromArchive(db: Db, body: Body): Promise<Resolved> {
       world: story.world,
       facts: await factsUpTo(db, parent.id),
       choiceMade: body.choiceMade,
-      extraRestrictions: await restrictionsFor(db, story.profileId),
+      extraRestrictions: asPromptRestrictions(
+        await limitsFor(db, story.profileId),
+      ),
     },
   };
 }

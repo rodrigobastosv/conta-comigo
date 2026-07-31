@@ -6,6 +6,7 @@ import type { ChildProfile } from "@/lib/archive";
 import { hasPersistence, supabase } from "@/lib/supabase/browser";
 import { Account } from "./account";
 import { Children } from "./children";
+import { AdultsOnly, Parents } from "./parents";
 import { Story } from "./story";
 
 /**
@@ -27,6 +28,8 @@ export function Shell() {
     stores ? undefined : null,
   );
   const [child, setChild] = useState<ChildProfile | null>(null);
+  /** Where the adult is: in the story, at the speed bump, or past it. */
+  const [adults, setAdults] = useState<"out" | "gate" | "in">("out");
 
   useEffect(() => {
     const db = supabase();
@@ -61,16 +64,48 @@ export function Shell() {
     );
   }
 
+  if (adults === "gate") {
+    return (
+      <AdultsOnly
+        onPass={() => setAdults("in")}
+        onCancel={() => setAdults("out")}
+      />
+    );
+  }
+
+  if (adults === "in") {
+    return (
+      <Parents
+        child={child}
+        onLeave={(removed) => {
+          setAdults("out");
+          // The child this screen was about no longer exists; going back to the
+          // story would be a story for a deleted profile.
+          if (removed) setChild(null);
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <Story profile={child} />
-      <button
-        type="button"
-        onClick={() => setChild(null)}
-        className="mt-6 self-center text-base text-shop/70 underline"
-      >
-        Trocar de criança
-      </button>
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setChild(null)}
+          className="text-base text-shop/70 underline"
+        >
+          Trocar de criança
+        </button>
+        <button
+          type="button"
+          onClick={() => setAdults("gate")}
+          className="text-base text-shop/70 underline"
+        >
+          Para os adultos
+        </button>
+      </div>
     </>
   );
 }

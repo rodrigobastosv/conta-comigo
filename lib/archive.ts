@@ -64,6 +64,7 @@ export type ChildProfile = {
   readingLevel: ReadingLevel;
   preferredVoice: string | null;
   restrictions: string[];
+  forbiddenNames: string[];
 };
 
 function asProfile(row: ProfileRow): ChildProfile {
@@ -74,6 +75,7 @@ function asProfile(row: ProfileRow): ChildProfile {
     readingLevel: row.reading_level,
     preferredVoice: row.preferred_voice,
     restrictions: row.restrictions,
+    forbiddenNames: row.forbidden_names ?? [],
   };
 }
 
@@ -210,25 +212,99 @@ export async function storyContext(
   };
 }
 
+export type Limits = {
+  restrictions: string[];
+  forbiddenNames: string[];
+};
+
 /**
- * The family's restrictions, on their way into the prompt.
+ * What the family has asked the narrator to avoid.
  *
  * Read on the server from the profile, never taken from the request body. A
  * restriction a client can drop from a request is not a restriction — see
  * `extraRestrictions` in lib/types.ts and the passage in `buildRequest` that
  * tells the model to obey them without mentioning them.
  */
-export async function restrictionsFor(
-  db: Db,
-  profileId: string,
-): Promise<string[]> {
+export async function limitsFor(db: Db, profileId: string): Promise<Limits> {
   const { data } = await db
     .from("profiles")
-    .select("restrictions")
+    .select("restrictions, forbidden_names")
     .eq("id", profileId)
     .maybeSingle();
 
-  return data?.restrictions ?? [];
+  return {
+    restrictions: data?.restrictions ?? [],
+    forbiddenNames: data?.forbidden_names ?? [],
+  };
+}
+
+/**
+ * The same limits, as lines the prompt can carry.
+ *
+ * A forbidden name becomes a restriction too, and not only a check at the input:
+ * refusing "Téo" as the helper's name is pointless if the model then hands it to
+ * the shopkeeper.
+ */
+export function asPromptRestrictions(limits: Limits): string[] {
+  return [
+    ...limits.restrictions,
+    ...limits.forbiddenNames.map(
+      (name) => `Nunca use o nome "${name}" para nenhum personagem.`,
+    ),
+  ];
+}
+
+/** Case- and accent-insensitive: "téo" and "Teo" are the same refusal. */
+export function isForbiddenName(name: string, forbidden: string[]): boolean {
+  const flatten = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .trim()
+      .toLowerCase();
+
+  const wanted = flatten(name);
+  return forbidden.some((entry) => flatten(entry) === wanted);
+}
+
+export async function updateLimits(
+  db: Db,
+  profileId: string,
+  limits: Limits,
+): Promise<boolean> {
+  const { error } = await db
+    .from("profiles")
+    .update({
+      restrictions: limits.restrictions,
+      forbidden_names: limits.forbiddenNames,
+    })
+    .eq("id", profileId);
+
+  if (error) {
+    console.error("[archive] could not save the limits", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Removes a child and everything they built.
+ *
+ * `stories` and `scenes` cascade from `profiles` in the schema, so this is one
+ * delete and not three. It is irreversible on purpose — a parent who asks for
+ * this is asking for it to be gone, not archived somewhere they cannot see.
+ */
+export async function deleteProfile(
+  db: Db,
+  profileId: string,
+): Promise<boolean> {
+  const { error } = await db.from("profiles").delete().eq("id", profileId);
+
+  if (error) {
+    console.error("[archive] could not delete the profile", error.message);
+    return false;
+  }
+  return true;
 }
 
 /** Beat 5 has landed: the story is finished and must stop being offered as unfinished. */

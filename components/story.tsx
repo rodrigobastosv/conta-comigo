@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   branchTo,
+  isForbiddenName,
   resumableStories,
   type ChildProfile,
   type StoryRead,
@@ -360,6 +361,21 @@ export function Story({ profile }: { profile: ChildProfile | null }) {
   }
 
   function begin() {
+    /**
+     * The same rule as the server's, said nicely.
+     *
+     * The route refuses this too, and that is the one that counts — this check
+     * exists so the child hears "escolhe outro" instead of watching a story fail
+     * to start for a reason nobody explained.
+     */
+    if (
+      profile &&
+      isForbiddenName(name.trim() || "Ajudante", profile.forbiddenNames)
+    ) {
+      setError("Esse nome a gente não usa aqui. Escolhe outro?");
+      return;
+    }
+
     unlockAudio();
     // In `ouvir` mode the child is not reading the screen, so narration is the
     // product; in `ler` mode it is an offer.

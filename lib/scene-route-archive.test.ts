@@ -38,7 +38,8 @@ function familyOf(guardian: string) {
         age: 5,
         reading_level: "ouvir",
         preferred_voice: null,
-        restrictions: [],
+        restrictions: [] as string[],
+        forbidden_names: [] as string[],
         created_at: "2026-01-01",
       },
     ],
@@ -500,6 +501,73 @@ describe("the ceiling, once it is shared", () => {
     assert.equal(response.status, 401);
     assert.deepEqual(await response.json(), { error: "sign-in-required" });
     assert.equal(spy.calls.length, 0, "never a free model endpoint");
+  });
+});
+
+describe("the family's limits, applied on the server", () => {
+  function familyWithLimits(restrictions: string[], names: string[]) {
+    const seed = withRootScene(GUARDIAN);
+    seed.profiles[0].restrictions = restrictions;
+    seed.profiles[0].forbidden_names = names;
+    return seed;
+  }
+
+  it("puts the profile's restrictions into the request the model sees", async () => {
+    const db = new FakeDb(GUARDIAN, familyWithLimits(["cachorro grande"], []));
+    const spy = narrator();
+    const handler = handlerFor(db, spy.generate);
+
+    await events(await handler(post({ ...CONTINUE, parentSceneId: ROOT })));
+
+    const { extraRestrictions } = spy.calls[0] as {
+      extraRestrictions: string[];
+    };
+    // Never from the body. A restriction a client can drop from a request is
+    // not a restriction.
+    assert.ok(extraRestrictions.includes("cachorro grande"));
+  });
+
+  it("refuses a forbidden name as the helper, before generating", async () => {
+    // No root scene in this one: the assertion at the end is that no story row
+    // exists at all, and withRootScene would have seeded one.
+    const family = familyOf(GUARDIAN);
+    family.profiles[0].forbidden_names = ["Téo"];
+    const db = new FakeDb(GUARDIAN, family);
+    const spy = narrator();
+    const handler = handlerFor(db, spy.generate);
+
+    const response = await handler(
+      post({
+        bibleId: "loja-de-coisas-perdidas",
+        beat: 1,
+        readingLevel: "ouvir",
+        helperName: "téo",
+        choiceMade: null,
+        profileId: PROFILE,
+      }),
+    );
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: "forbidden-name" });
+    assert.equal(spy.calls.length, 0);
+    assert.equal(
+      db.rowsVisibleIn("stories").length,
+      0,
+      "and no story is left behind",
+    );
+  });
+
+  it("tells the model to keep a forbidden name out of the cast too", async () => {
+    const db = new FakeDb(GUARDIAN, familyWithLimits([], ["Téo"]));
+    const spy = narrator();
+    const handler = handlerFor(db, spy.generate);
+
+    await events(await handler(post({ ...CONTINUE, parentSceneId: ROOT })));
+
+    const { extraRestrictions } = spy.calls[0] as {
+      extraRestrictions: string[];
+    };
+    assert.ok(extraRestrictions.some((line) => line.includes("Téo")));
   });
 });
 

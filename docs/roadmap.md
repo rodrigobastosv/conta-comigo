@@ -104,10 +104,22 @@ the server** — the route reads `profiles.restrictions` and passes them as
 `extraRestrictions`, which is where they have to be read from, since a restriction
 a client can drop from a request is not a restriction.
 
-Missing: anything that writes that column. There is no screen where a parent types
-"cachorros grandes", no history view, no way to delete a profile, and no check of
-forbidden names at the helper-name input — which has to happen there too, not only
-in the prompt.
+Done: [components/parents.tsx](../components/parents.tsx) — restrictions as four
+common presets plus free text, forbidden names, the reading history with the path
+each story took, and deleting a child (which cascades in the schema, so it is one
+delete and not three). In front of it, a speed bump that is not security and does
+not pretend to be: it exists so a five-year-old looking for the next story does
+not land in the settings, and an eight-year-old is welcome to solve it.
+
+Forbidden names are checked in two places, and only one of them counts: the route
+refuses the helper name before generating anything, and the client repeats the
+check so the child hears "escolhe outro" instead of watching a story fail to start
+for a reason nobody explained. They also reach the prompt, or the model stays free
+to hand the name to a character.
+
+Missing: `profiles.preferred_voice` is still not read or written — the voice
+picker's choice lives in `useState` and resets on reload. That is the last
+unattached wire in the schema.
 
 ## Evaluation set
 

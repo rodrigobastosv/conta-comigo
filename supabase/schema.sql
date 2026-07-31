@@ -15,9 +15,15 @@ create table profiles (
   -- Values stay in Portuguese: they are also in the prompt and in ReadingLevel.
   reading_level text not null check (reading_level in ('ouvir', 'ler')),
   preferred_voice text,
-  -- Parents' mode: fears to avoid, forbidden names. Reaches the prompt as
-  -- extraRestrictions. Empty today, the structure already exists.
+  -- Parents' mode. Free text, one restriction per entry ("cachorros grandes",
+  -- "trovão"), reaching the prompt as extraRestrictions with the instruction to
+  -- obey without mentioning them.
   restrictions  jsonb not null default '[]'::jsonb,
+  -- Kept apart from `restrictions` because it is checked in two places, not
+  -- one: it reaches the prompt AND it is refused at the helper-name input. A
+  -- name the model was told to avoid is no use if the child can type it in as
+  -- the hero.
+  forbidden_names text[] not null default '{}'::text[],
   created_at    timestamptz not null default now()
 );
 

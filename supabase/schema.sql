@@ -15,9 +15,15 @@ create table profiles (
   -- Values stay in Portuguese: they are also in the prompt and in ReadingLevel.
   reading_level text not null check (reading_level in ('ouvir', 'ler')),
   preferred_voice text,
-  -- Parents' mode: fears to avoid, forbidden names. Reaches the prompt as
-  -- extraRestrictions. Empty today, the structure already exists.
+  -- Parents' mode. Free text, one restriction per entry ("cachorros grandes",
+  -- "trovão"), reaching the prompt as extraRestrictions with the instruction to
+  -- obey without mentioning them.
   restrictions  jsonb not null default '[]'::jsonb,
+  -- Kept apart from `restrictions` because it is checked in two places, not
+  -- one: it reaches the prompt AND it is refused at the helper-name input. A
+  -- name the model was told to avoid is no use if the child can type it in as
+  -- the hero.
+  forbidden_names text[] not null default '{}'::text[],
   created_at    timestamptz not null default now()
 );
 
@@ -94,10 +100,18 @@ language sql stable as $$
 $$;
 
 -- Zero child data leaves here. Each guardian only sees what is theirs.
+--
+-- RLS is the real boundary, not decoration: the app never holds a service-role
+-- key. Every request runs as the signed-in adult, so a missing `where` in
+-- application code cannot leak another family's scene — the database refuses
+-- before the code gets the chance. See
+-- docs/decisions.md#the-adult-signs-in-and-rls-is-the-boundary.
 alter table profiles enable row level security;
 alter table stories enable row level security;
 alter table scenes enable row level security;
 
+-- `for all` with no `with check`: Postgres reuses the `using` expression for
+-- inserts, so a guardian cannot write a row they would not be allowed to read.
 create policy "guardian's profiles" on profiles
   for all using (guardian_id = auth.uid());
 
@@ -116,3 +130,75 @@ create policy "guardian's scenes" on scenes
        where s.id = scenes.story_id and p.guardian_id = auth.uid()
     )
   );
+
+-- The generation ceiling, shared by every instance.
+--
+-- It used to be a Map in one process, which is correct with exactly one
+-- instance and worthless on a platform that starts a new one whenever it feels
+-- like it — the counter resets under exactly the load it was written for.
+create table generation_counters (
+  -- The guardian, or an IP for traffic with no session.
+  key        text primary key,
+  total      integer not null default 0,
+  expires_at timestamptz not null
+);
+
+alter table generation_counters enable row level security;
+-- No policy on purpose: nothing reaches this table except claim_generation(),
+-- which is security definer. A client that could read it could read every
+-- family's usage; a client that could write it could reset its own ceiling.
+
+/**
+ * Counts one generation and says whether it is allowed.
+ *
+ * security definer, and the key is auth.uid() read INSIDE the function — never
+ * an argument. A ceiling whose key the caller chooses is not a ceiling. The
+ * caller's identity here is the subject of a JWT Postgres has already verified.
+ *
+ * The count is one statement so it is atomic: read-then-write from two
+ * instances is the same bug in a new place.
+ *
+ * Returns a code rather than a boolean because "you are over the ceiling" and
+ * "your session expired" are different answers to the caller, and a boolean
+ * would send a family whose token went stale a message about spending too much.
+ *   'ok' | 'over-limit' | 'no-session'
+ */
+create or replace function claim_generation(
+  max_per_window integer,
+  window_seconds integer
+)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  claimed integer;
+begin
+  if auth.uid() is null then
+    -- With persistence configured, a caller with no session has nowhere to
+    -- store a scene anyway, and answering would make this a free model endpoint
+    -- for whoever finds it.
+    return 'no-session';
+  end if;
+
+  insert into generation_counters (key, total, expires_at)
+       values (auth.uid()::text, 1, now() + make_interval(secs => window_seconds))
+  on conflict (key) do update
+          set total = case
+                        when generation_counters.expires_at < now() then 1
+                        else generation_counters.total + 1
+                      end,
+              expires_at = case
+                             when generation_counters.expires_at < now()
+                               then now() + make_interval(secs => window_seconds)
+                             else generation_counters.expires_at
+                           end
+    returning total into claimed;
+
+  return case when claimed <= max_per_window then 'ok' else 'over-limit' end;
+end;
+$$;
+
+revoke all on function claim_generation(integer, integer) from public;
+grant execute on function claim_generation(integer, integer) to authenticated;

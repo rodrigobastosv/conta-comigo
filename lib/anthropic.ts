@@ -1,9 +1,21 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+let client: Anthropic | null = null;
+
 /**
- * Single client. Server code only — the key never reaches the browser.
+ * Single client, built on first use. Server code only — the key never reaches
+ * the browser.
+ *
+ * Lazy rather than a module-level constant because the constructor throws when
+ * ANTHROPIC_API_KEY is missing, and importing this module is not the same thing
+ * as calling the model: `npm run build` walks the route files, and a developer
+ * running on FAKE_MODEL has no key at all. Both would fail at import time on a
+ * client nobody was going to use.
  */
-export const anthropic = new Anthropic();
+export function anthropic(): Anthropic {
+  client ??= new Anthropic();
+  return client;
+}
 
 export const MODEL = "claude-opus-5";
 

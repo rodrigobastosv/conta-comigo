@@ -1,0 +1,23 @@
+# What never gets uploaded to a build.
+#
+# This file REPLACES .gitignore for Vercel's purposes rather than adding to it,
+# which is the trap: anything ignored there and not repeated here would start
+# being uploaded. The secrets line is the one that matters — the deployment
+# reads its variables from the project's own settings, never from a file that
+# rode along with the source.
+
+node_modules
+.next
+out
+build
+
+# Secrets. The whole reason this file is explicit.
+.env
+.env.local
+.env*.local
+
+.git
+eval-reports
+coverage
+*.log
+.DS_Store

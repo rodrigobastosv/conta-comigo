@@ -34,6 +34,20 @@ Only `ANTHROPIC_API_KEY` is required. Without the Supabase variables the app run
 entirely in memory: the story works end to end, but reloading the page loses the
 path travelled.
 
+### Without a key, and without a bill
+
+```bash
+npm run dev:fake             # http://localhost:3000, canned scenes
+```
+
+`dev:fake` sets `FAKE_MODEL=1` and a narrator made of canned prose answers
+instead of the model — five real beats, streamed sentence by sentence, in
+pt-BR. Everything downstream is the real thing: the SSE stream, the sentence
+splitting, the narration queue, the choice buttons, the write path.
+
+Use it for anything that is not the prompt itself. It is opt-in and never
+inferred from a missing key, and it warns in the server log on every scene.
+
 ## Documentation
 
 | Document | Answers |

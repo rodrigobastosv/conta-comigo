@@ -160,6 +160,7 @@ In [lib/anthropic.ts](../lib/anthropic.ts):
 | [lib/types.ts](../lib/types.ts) | `Beat`, `Scene`, `SceneRequest`, `ReadingLevel`. |
 | [lib/stream-json.ts](../lib/stream-json.ts) | Extracts the text from the partial JSON and splits it into sentences. |
 | [lib/generate-scene.ts](../lib/generate-scene.ts) | The call to the model, with cache and streaming. |
+| [lib/fake-scene.ts](../lib/fake-scene.ts) | The same events, from canned prose. Development without a key — `FAKE_MODEL=1`. |
 | [lib/sse.ts](../lib/sse.ts) | The client's SSE reader. |
 | [lib/audio.ts](../lib/audio.ts) | iOS unlock for both `speechSynthesis` and the `AudioContext`, on the one user gesture. |
 | [lib/tts/voices.ts](../lib/tts/voices.ts) | The voice catalogue: a voice is a character, and its id outlives any provider. |

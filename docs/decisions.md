@@ -464,6 +464,35 @@ It sits in a `Map` in the process memory, which is only correct with one instanc
 It is conscious debt, with a `TODO` in the code: with two instances, each counts
 its own ceiling and the total doubles.
 
+## Development runs on a fake narrator, not on a second model
+
+[lib/fake-scene.ts](../lib/fake-scene.ts), behind `FAKE_MODEL=1`. Five beats of
+canned pt-BR prose, streamed in chunks through the same sentence splitter and
+validated by the same `validateScene`.
+
+The alternative on the table was pointing development at a cheaper provider. It
+was rejected: the prompt is a 60-line constitution tuned against one model's
+structured output, and a second provider means a second output-format path, a
+second streaming shape and a second set of failure modes — all to produce scenes
+nobody is going to read. **The thing development actually needs is not a cheaper
+narrator, it is a free one that is instant and identical every time.** A fake is
+better at that than any model: no key, no bill, no eight-second wait, and the same
+text on every run, which is what makes a UI bug reproducible.
+
+What it deliberately does not do is fake the *contract*. It resolves the bible
+from the registry, it declares an invented world on beat 1 and nowhere else, it
+returns `choices: []` on beat 5, and it goes through `validateScene` before
+yielding — so if the contract moves and the fake does not, it throws in
+development instead of quietly letting an impossible scene reach the screen.
+
+**It is opt-in and it is never inferred from a missing key.** Falling back to it
+automatically would mean a deployment whose key expired starts reading canned
+prose to a child, with a green health check and nobody the wiser. It also warns
+in the server log on every scene, for the same reason.
+
+Judge the prompt only against the real model: `npm run eval`. The fake tells you
+nothing about whether a scene is good, and it is not meant to.
+
 ## The request body is a `strictObject`
 
 An extra field in the POST is a 400, not an ignored field. On a route that costs

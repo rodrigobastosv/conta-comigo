@@ -51,7 +51,7 @@ export async function* generateScene(
   let sentenceIndex = 0;
 
   try {
-    const stream = anthropic.messages.stream({
+    const stream = anthropic().messages.stream({
       model: MODEL,
       max_tokens: MAX_TOKENS,
       output_config: {

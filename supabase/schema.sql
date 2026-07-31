@@ -50,7 +50,10 @@ create table stories (
   -- anyway).
   helper_name text not null,
   created_at  timestamptz not null default now(),
-  ended_at    timestamptz
+  ended_at    timestamptz,
+  -- The child said she wants to keep this one. A column rather than a table:
+  -- it is one bit per story, and it sorts.
+  loved_at    timestamptz
 );
 
 create table scenes (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   branchTo,
   isForbiddenName,
+  setLoved,
   updateChoices,
   type ChildProfile,
   type StoryRead,
@@ -11,7 +12,7 @@ import {
 import { unlockAudio } from "@/lib/audio";
 import { readSSE } from "@/lib/sse";
 import { supabase } from "@/lib/supabase/browser";
-import { Pisca } from "./pisca";
+import { companionById } from "./companions";
 import { sentenceRange } from "@/lib/tts/highlight";
 import { PlaybackQueue } from "@/lib/tts/queue";
 import { BIBLES, DEFAULT_BIBLE_ID, bibleById } from "@/lib/story-bibles";
@@ -109,6 +110,13 @@ export function Story({
   const [spoken, setSpoken] = useState<number | null>(null);
   /** Sentences of the current scene, in order, as the server closes them. */
   const [sentences, setSentences] = useState<string[]>([]);
+  /** Whether this run has been kept. `null` until the child is asked. */
+  const [kept, setKept] = useState<boolean | null>(null);
+  /**
+   * The story row this run belongs to. Per run rather than per node — every
+   * scene on the path shares it — and null where there is no archive.
+   */
+  const [storyId, setStoryId] = useState<string | null>(null);
 
   /**
    * The voices this deployment can actually speak. Starts as the device voice
@@ -238,6 +246,7 @@ export function Story({
       setError(null);
       setPartial("");
       setSentences([]);
+      setKept(null);
       setPhase("generating");
 
       // Whatever was being read belongs to the scene we are leaving.
@@ -297,10 +306,16 @@ export function Story({
             setSentences((s) => [...s, text]);
             if (wantsNarration.current) queue.current?.push(index, text);
           } else if (event === "scene") {
-            const { scene, sceneId } = data as {
+            const {
+              scene,
+              sceneId,
+              storyId: id,
+            } = data as {
               scene: Scene;
               sceneId?: string | null;
+              storyId?: string | null;
             };
+            if (id) setStoryId(id);
             // Only beat 1 of an invented world carries one, and it has to
             // survive every later beat of this run.
             if (scene.world) setWorld(scene.world);
@@ -364,6 +379,8 @@ export function Story({
     );
     setSentences([]);
     setPartial("");
+    setStoryId(entry.story.id);
+    setKept(entry.story.lovedAt ? true : null);
     setPhase(branch[branch.length - 1].beat === FINAL_BEAT ? "end" : "reading");
   }
 
@@ -383,6 +400,22 @@ export function Story({
     // the ref above is what makes this run exactly once per story.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeEntry]);
+
+  /**
+   * Marks this run as one to keep.
+   *
+   * The story is already stored — every validated scene was written as it was
+   * generated. This is only the bit that says she wants it, which is what makes
+   * a library of thirty browsable.
+   */
+  async function keep() {
+    const db = supabase();
+    if (!db || !storyId) return;
+
+    setKept(true);
+    // Failing to save is not worth an error screen at the end of a story.
+    await setLoved(db, storyId, true);
+  }
 
   function begin() {
     /**
@@ -682,7 +715,10 @@ export function Story({
               the constitution forbids. See components/pisca.tsx. */}
           {generating && !textOnScreen && (
             <div className="flex flex-col items-center gap-3 py-10">
-              <Pisca size={112} mood="glowing" />
+              {companionById(profile?.preferredCompanion).Drawing({
+                size: 112,
+                mood: "glowing",
+              })}
               <p className="text-lg text-muted">Começando a história…</p>
             </div>
           )}
@@ -761,6 +797,46 @@ export function Story({
           {phase === "end" && (
             <div className="grid gap-3 pb-4">
               <p className="text-center text-lg text-shop">Fim.</p>
+
+              {/* The friend asks — he is a friend and not the narrator, and the
+                  question is about the app rather than about the story. A line
+                  like "que legal que você abriu a porta azul" would be the
+                  narrator becoming a character; this is not. See
+                  docs/story-bible.md. */}
+              {profile && storyId && (
+                <div className="flex items-center gap-3 rounded-3xl border-2 border-edge bg-card px-4 py-4">
+                  {companionById(profile.preferredCompanion).Drawing({
+                    size: 64,
+                    mood: kept ? "resting" : "asleep",
+                  })}
+                  {kept ? (
+                    <p className="text-lg">
+                      Guardei! Ela fica nas suas histórias.
+                    </p>
+                  ) : (
+                    <div className="flex flex-1 flex-col gap-2">
+                      <p className="text-lg">Quer guardar essa?</p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void keep()}
+                          className="flex-1 rounded-xl bg-shop px-4 py-3 text-lg text-paper transition active:scale-[0.98]"
+                        >
+                          Quero
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setKept(false)}
+                          className="flex-1 rounded-xl border-2 border-edge px-4 py-3 text-lg transition active:scale-[0.98]"
+                        >
+                          Agora não
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={goBackOne}

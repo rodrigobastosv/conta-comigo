@@ -49,6 +49,7 @@ export type StoryRow = {
   helper_name: string;
   created_at: string;
   ended_at: string | null;
+  loved_at: string | null;
 };
 
 export type SceneRow = {
@@ -99,6 +100,7 @@ type StoryInsert = {
   helper_name: string;
   world?: WorldJson | null;
   ended_at?: string | null;
+  loved_at?: string | null;
 };
 
 type SceneInsert = {

@@ -187,6 +187,18 @@ set and never run against the real model, so its numbers are unknown and the v3
 baseline covers fourteen cases, not seventeen. Run `npm run eval` before trusting
 anything about how this world reads.
 
+## Keeping and letting go
+
+Done. Every scene was always stored as it was generated, so "save it if you
+liked it" was never about saving — the two things actually missing were marking
+the good ones and removing a bad one. `stories.loved_at` does both: kept stories
+sort first in a library that will hold thirty by month three, and deleting one
+cascades to its scenes.
+
+The friend asks at the end of a story, which is allowed because he is a friend
+and not the narrator, and because "quer guardar essa?" is about the app rather
+than about the story. See [story-bible.md](story-bible.md).
+
 ## Illustrations
 
 The choice icons are emoji, and `Choice.icon` is capped at 8 characters because of

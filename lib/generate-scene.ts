@@ -1,5 +1,6 @@
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { anthropic, EFFORT, MAX_TOKENS, MODEL } from "./anthropic.ts";
+import { costOfScene, inCents } from "./cost.ts";
 import {
   CONSTITUTION,
   buildRequest,
@@ -91,6 +92,21 @@ export async function* generateScene(
     }
 
     const message = await stream.finalMessage();
+
+    /**
+     * What this beat cost, in the server log.
+     *
+     * One line per scene rather than a stored column: the unit anybody argues
+     * in is the story, and five of these lines are a story. `cacheRead` is the
+     * number to watch — if it is zero on beats 2–5, the cached prefix has been
+     * invalidated and the story costs several times what it should.
+     */
+    const cost = costOfScene(message.usage);
+    console.log(
+      `[cost] beat ${request.beat} ${inCents(cost.usd)} ` +
+        `(in ${cost.inputTokens}, out ${cost.outputTokens}, ` +
+        `cacheWrite ${cost.cacheWriteTokens}, cacheRead ${cost.cacheReadTokens})`,
+    );
 
     if (message.stop_reason === "refusal") {
       yield { type: "error", message: "model-refusal" };

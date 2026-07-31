@@ -484,6 +484,58 @@ The in-memory `Map` is still there for the one case it is correct in: a
 deployment with no Supabase variables, keyed by IP. That is a contributor's
 laptop, which is one process by definition.
 
+## The unit of cost is one story
+
+Not one token, not one scene. Nobody can hold "$5 per million input tokens" in
+their head while deciding whether a feature is worth building; everybody can
+hold **"a story costs about eight cents."** [lib/cost.ts](../lib/cost.ts) is
+what converts, `npm run cost` is what measures, and every scene logs its own
+price so that five log lines are a story.
+
+Measured against `claude-opus-5` at `EFFORT=low`, five beats down one branch of
+the shop, with the cache warm:
+
+| | model | narration | stories inside Google's free month |
+| --- | --- | --- | --- |
+| `ouvir` | **8.3¢** | 3 455 characters | 289 |
+| `ler` | **12.1¢** | 6 047 characters | 165 |
+
+Two things that table hides and the per-beat log shows:
+
+**The cache is carrying most of the story.** The system block is 2 796 tokens —
+constitution plus bible — and beats 2–5 read it rather than writing it. A read
+is a tenth of the input price; a write is a quarter more than it. **If
+`cacheRead` is ever 0 on beats 2–5, something moved into the `system` that
+varies per call**, and the story costs several times what it should. That is
+the number to watch in the log, and it is why nothing volatile may go in the
+`system` — see [the cache is in the right place](#the-cache-is-in-the-right-place).
+
+**A cold story costs about 1.6¢ more than a warm one.** Beat 1 pays the cache
+write when nobody has read a story in the last five minutes: `(1.25 − 0.1) ×
+2796 × $5/M`. So the first story of the evening is ~9.9¢ in `ouvir`, and the
+second one right after it is 8.3¢.
+
+Narration is free in the sense that matters — Google's tier is a monthly
+character quota, not a per-call charge — so its honest unit is "how much of the
+month one story spends". 289 `ouvir` stories a month cost nothing; the 290th
+starts costing. Reporting that as "$0.00" would be a lie of a different shape.
+
+### What this says about speculative pre-generation (#15)
+
+Speculation generates both branches of beats 2–5 while the child reads the beat
+before, so a story goes from 5 generations to 9. At the measured per-beat price
+that is **8.3¢ → 15.0¢ in `ouvir` (+81%)** and **12.1¢ → 21.8¢ in `ler` (+79%)**.
+
+It buys the entire wait after a choice — currently ~3 s to first token and ~11 s
+to a finished scene — and drops it to zero.
+
+**Whether that is a good trade turns on one number nobody has: how often a
+second path through the same story is ever taken.** The discarded branch is not
+waste if she comes back and takes it — it is the archive doing its job, and the
+re-read is then free. Break-even is roughly one re-read per story. That number
+is *now measurable*, because the graph is stored: count scenes that have a
+sibling and were visited. **Measure it before building #15.**
+
 ## The adult signs in, and RLS is the boundary
 
 E-mail and password for the responsible adult, **with no confirmation step**.

@@ -14,7 +14,8 @@
     "test": "node --experimental-strip-types --test 'lib/**/*.test.ts'",
     "eval": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/eval.ts",
     "voices:list": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/list-voices.ts",
-    "tts:bench": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/bench-tts.ts"
+    "tts:bench": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/bench-tts.ts",
+    "cost": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/story-cost.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

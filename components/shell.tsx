@@ -1,23 +1,34 @@
 "use client";
 
 import type { Session } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
-import type { ChildProfile } from "@/lib/archive";
+import { useCallback, useEffect, useState } from "react";
+import {
+  finishedStories,
+  resumableStories,
+  type ChildProfile,
+  type StoryRead,
+} from "@/lib/archive";
 import { hasPersistence, supabase } from "@/lib/supabase/browser";
 import { Account } from "./account";
 import { Children } from "./children";
+import { Home, type HomeAction } from "./home";
+import { Library } from "./library";
 import { AdultsOnly, Parents } from "./parents";
+import { Logo } from "./pisca";
 import { Story } from "./story";
+import { ThemeToggle } from "./theme";
 
 /**
- * Which of the three screens the family is on.
+ * Which screen the family is on.
  *
- * The order is a door, a name, and then the story — and the first two only
- * exist where there is an archive. **With no Supabase variables the app is
- * exactly what it was before persistence existed**: no sign-in, no profile, one
- * session that ends when the tab does. That is the promise in the README and
- * this component is where it is kept.
+ * The order is a door, a name, then a home — and the first two only exist where
+ * there is an archive. **With no Supabase variables the app is exactly what it
+ * was before persistence existed**: no sign-in, no profile, no home screen, one
+ * story that ends when the tab does. That is the promise in the README and this
+ * component is where it is kept.
  */
+type View = "home" | "story" | "library" | "share" | "gate" | "parents";
+
 export function Shell() {
   const stores = hasPersistence();
 
@@ -28,8 +39,11 @@ export function Shell() {
     stores ? undefined : null,
   );
   const [child, setChild] = useState<ChildProfile | null>(null);
-  /** Where the adult is: in the story, at the speed bump, or past it. */
-  const [adults, setAdults] = useState<"out" | "gate" | "in">("out");
+  const [view, setView] = useState<View>("home");
+  const [resumable, setResumable] = useState<StoryRead[]>([]);
+  const [finished, setFinished] = useState<StoryRead[]>([]);
+  /** The story the home screen asked to pick up, handed to `Story` once. */
+  const [resuming, setResuming] = useState<StoryRead | null>(null);
 
   useEffect(() => {
     const db = supabase();
@@ -41,71 +55,167 @@ export function Shell() {
       setSession(next);
       // Signing out has to drop the child too, or the next adult to sign in on
       // this device starts inside somebody else's evening.
-      if (!next) setChild(null);
+      if (!next) {
+        setChild(null);
+        setView("home");
+      }
     });
 
     return () => data.subscription.unsubscribe();
   }, []);
 
-  if (!stores) return <Story profile={null} />;
+  /**
+   * What the shelves hold.
+   *
+   * Called when the family arrives home, not synchronised to a state variable:
+   * the shelves change because somebody finished a story, which is an event.
+   * Takes the profile id rather than reading `child`, so it can be called in
+   * the same breath as choosing one.
+   *
+   * Read straight from the browser: RLS decides which rows come back, so a
+   * route would add a round trip and no safety.
+   */
+  const refresh = useCallback(async (profileId: string) => {
+    const db = supabase();
+    if (!db) return;
 
-  if (session === undefined) {
-    return <p className="flex-1 py-8 text-lg text-shop/70">Um instante…</p>;
+    const [going, done] = await Promise.all([
+      resumableStories(db, profileId),
+      finishedStories(db, profileId),
+    ]);
+    setResumable(going.filter((entry) => entry.tip));
+    setFinished(done);
+  }, []);
+
+  function goHome() {
+    setResuming(null);
+    setView("home");
+    if (child) void refresh(child.id);
   }
 
-  if (!session) return <Account />;
+  function pickChild(next: ChildProfile) {
+    setChild(next);
+    setView("home");
+    void refresh(next.id);
+  }
+
+  const header = (
+    <div className="mb-8 flex items-center justify-between gap-3">
+      <button
+        type="button"
+        onClick={child ? goHome : undefined}
+        // Only a control when there is somewhere to go; otherwise it is a mark.
+        disabled={!child}
+        aria-label={child ? "Voltar pro início" : undefined}
+      >
+        <Logo />
+      </button>
+      <ThemeToggle />
+    </div>
+  );
+
+  if (!stores) {
+    return (
+      <>
+        {header}
+        <Story profile={null} />
+      </>
+    );
+  }
+
+  if (session === undefined) {
+    return (
+      <>
+        {header}
+        <p className="flex-1 py-8 text-lg text-muted">Um instante…</p>
+      </>
+    );
+  }
+
+  if (!session) {
+    return (
+      <>
+        {header}
+        <Account />
+      </>
+    );
+  }
 
   if (!child) {
     return (
       <>
-        <Children guardianId={session.user.id} onPicked={setChild} />
+        {header}
+        <Children guardianId={session.user.id} onPicked={pickChild} />
         <SignOut />
       </>
     );
   }
 
-  if (adults === "gate") {
-    return (
-      <AdultsOnly
-        onPass={() => setAdults("in")}
-        onCancel={() => setAdults("out")}
-      />
-    );
-  }
-
-  if (adults === "in") {
-    return (
-      <Parents
-        child={child}
-        onLeave={(removed) => {
-          setAdults("out");
-          // The child this screen was about no longer exists; going back to the
-          // story would be a story for a deleted profile.
-          if (removed) setChild(null);
-        }}
-      />
-    );
-  }
-
   return (
     <>
-      <Story profile={child} />
-      <div className="mt-6 flex flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setChild(null)}
-          className="text-base text-shop/70 underline"
-        >
-          Trocar de criança
-        </button>
-        <button
-          type="button"
-          onClick={() => setAdults("gate")}
-          className="text-base text-shop/70 underline"
-        >
-          Para os adultos
-        </button>
-      </div>
+      {header}
+
+      {view === "home" && (
+        <Home
+          childName={child.nickname}
+          resumable={resumable}
+          finishedCount={finished.length}
+          onPick={(action: HomeAction) => {
+            if (action === "new") {
+              setResuming(null);
+              setView("story");
+            } else if (action === "library") setView("library");
+            else if (action === "share") setView("share");
+          }}
+          onResume={(entry) => {
+            setResuming(entry);
+            setView("story");
+          }}
+        />
+      )}
+
+      {view === "story" && (
+        <Story profile={child} resumeEntry={resuming} onHome={goHome} />
+      )}
+
+      {(view === "library" || view === "share") && (
+        <Library profileId={child.id} intent={view} onLeave={goHome} />
+      )}
+
+      {view === "gate" && (
+        <AdultsOnly onPass={() => setView("parents")} onCancel={goHome} />
+      )}
+
+      {view === "parents" && (
+        <Parents
+          child={child}
+          onLeave={(removed) => {
+            // The child this screen was about no longer exists; going back to
+            // the home screen would be a home screen for a deleted profile.
+            if (removed) setChild(null);
+            goHome();
+          }}
+        />
+      )}
+
+      {view === "home" && (
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setChild(null)}
+            className="text-base text-muted underline"
+          >
+            Trocar de criança
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("gate")}
+            className="text-base text-muted underline"
+          >
+            Para os adultos
+          </button>
+        </div>
+      )}
     </>
   );
 }
@@ -115,7 +225,7 @@ function SignOut() {
     <button
       type="button"
       onClick={() => void supabase()?.auth.signOut()}
-      className="mt-6 self-center text-base text-shop/70 underline"
+      className="mt-6 self-center text-base text-muted underline"
     >
       Sair
     </button>

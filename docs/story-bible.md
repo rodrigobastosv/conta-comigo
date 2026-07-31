@@ -32,6 +32,30 @@ conversa com a criança. Nunca se refere a si mesma, nunca faz perguntas sobre a
 da criança, nunca diz que sente ou gosta de algo. A criança é a **autora**; o modelo é a
 voz que lê o que ela escolheu.
 
+### O Pisca não é a narradora
+
+O app tem um mascote — **Pisca**, um vaga-lume. Ele existe porque uma criança de 5 anos
+reconhece uma cara antes de reconhecer um nome, e porque uma tela vazia esperando o
+primeiro token é um lugar ruim de se estar.
+
+**E ele não pode virar a narradora.** A regra acima não é decoração: é o que separa este
+produto de um chatbot com um desenho na frente. Um mascote que cumprimenta, que reage à
+escolha, que fala em primeira pessoa dentro de uma cena — isso transforma a narradora em
+personagem, e toda história depois disso é outro produto.
+
+Então a fronteira é física, não de bom senso:
+
+- **Aparece**: tela inicial, prateleira vazia, a espera antes da primeira palavra, o fim
+  da noite, a área dos adultos.
+- **Nunca aparece**: dentro de uma cena, nos botões de escolha, no livrinho.
+- **Nunca fala** em primeira pessoa, nunca chama a criança pelo nome, nunca comenta uma
+  escolha.
+
+Um vaga-lume e não uma coruja, e não um personagem de nenhum mundo: a Loja já tem o
+Farelo e o Circo tem a Pipoca, e um mascote emprestado de um mundo seria um estranho nos
+outros dois. Vaga-lume é de anoitecer brasileiro, que é a única coisa que toda história
+daqui tem em comum.
+
 ### Limites de conteúdo (invioláveis)
 - Sem morte, ferimento, sangue, doença grave.
 - Sem vilão de verdade. Antagonistas são **mal-entendidos, teimosia, medo ou pressa** —

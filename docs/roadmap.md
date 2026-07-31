@@ -89,9 +89,16 @@ While the child reads scene N, generate both possible branches of scene N+1. Her
 choice then reveals content that is already finished: perceived latency close to
 zero.
 
-It costs two generations where one will be used. It makes sense after
-persistence, because the discarded branch is not waste — it stays in the archive
-for when she comes back and takes the other path.
+Now costed: a story goes from 5 generations to 9, which is **8.3¢ → 15.0¢ in
+`ouvir`** and **12.1¢ → 21.8¢ in `ler`**. It buys the whole post-choice wait,
+about 3 s to first token and 11 s to a finished scene.
+
+Blocked on a measurement, not on code: **how often is a second path through the
+same story ever taken?** The discarded branch is only waste if she never comes
+back for it, and break-even is roughly one re-read per story. The graph now
+stores what is needed to answer that — count scenes that have a sibling and were
+visited. See
+[decisions.md](decisions.md#what-this-says-about-speculative-pre-generation-15).
 
 ## Parents' mode
 

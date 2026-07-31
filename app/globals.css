@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/**
+ * Two lightings, not one theme and its inverse.
+ *
+ * This app is used at bedtime. The light palette is paper at four in the
+ * afternoon; the dark one is a room where somebody is trying to fall asleep, so
+ * it is a warm dark rather than black, and the accent is lifted until it is
+ * still legible on it. Inverting the light palette would have produced a blue
+ * glare, which is the one thing a bedtime screen must not be.
+ */
 @theme {
   --color-paper: #fdf6e8;
   --color-ink: #2c2418;
@@ -9,10 +18,132 @@
   --font-tale: Georgia, "Times New Roman", serif;
 }
 
+:root {
+  --paper: #fdf6e8;
+  --ink: #2c2418;
+  --shop: #b5541f;
+  --farelo: #d9a95c;
+  /* A card lifted off the page. In light it is whiter than the paper. */
+  --card: #fffdf7;
+  --edge: rgb(44 36 24 / 0.14);
+  --muted: rgb(44 36 24 / 0.62);
+  --glow: #f2b544;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --paper: #1a1613;
+  --ink: #f2e8d8;
+  /* Lifted from #b5541f: the original is unreadable on a dark ground. */
+  --shop: #e8834a;
+  --farelo: #d9a95c;
+  --card: #241f1a;
+  --edge: rgb(242 232 216 / 0.16);
+  --muted: rgb(242 232 216 / 0.6);
+  --glow: #f2b544;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1a1613;
+    --ink: #f2e8d8;
+    --shop: #e8834a;
+    --farelo: #d9a95c;
+    --card: #241f1a;
+    --edge: rgb(242 232 216 / 0.16);
+    --muted: rgb(242 232 216 / 0.6);
+    --glow: #f2b544;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-shop: var(--shop);
+  --color-farelo: var(--farelo);
+  --color-card: var(--card);
+  --color-edge: var(--edge);
+  --color-muted: var(--muted);
+  --color-glow: var(--glow);
+}
+
 html,
 body {
-  background: var(--color-paper);
-  color: var(--color-ink);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-tale);
   -webkit-text-size-adjust: 100%;
+}
+
+/**
+ * Everything a finger can hit is at least 44px and never shows a tap flash.
+ * A five-year-old taps with the whole hand.
+ */
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/**
+ * Focus has to be visible — some children navigate with a keyboard or a
+ * switch — but it must not sit on top of a warm page like a browser default.
+ */
+:focus-visible {
+  outline: 3px solid var(--shop);
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+/**
+ * Honour the setting. Some of the children this is for are exactly the ones who
+ * cannot watch a thing wobble.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* The firefly's light. Slow, so it reads as breathing rather than blinking. */
+@keyframes pisca-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes pisca-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: rise-in 320ms ease-out both;
 }

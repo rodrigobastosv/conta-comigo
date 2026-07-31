@@ -5,6 +5,7 @@ import {
   type GenerationEventLike,
   type SceneGenerator,
 } from "./scene-route.ts";
+import { PROMPT_VERSION } from "./prompts/v1.ts";
 import { FakeDb } from "./supabase/fake-db.ts";
 
 /**
@@ -171,7 +172,10 @@ describe("the write path", () => {
     const root = db.rowsVisibleIn("scenes")[0];
     assert.equal(root.parent_scene_id, null, "the root scene has no parent");
     assert.equal(root.entry_choice, null, "nothing led to the first scene");
-    assert.equal(root.prompt_version, "v3");
+    // Against the constant, not a literal: the point of the column is that it
+    // tracks whatever the prompt currently is, so a version bump must not need
+    // a test edit.
+    assert.equal(root.prompt_version, PROMPT_VERSION);
 
     const sceneEvent = first.at(-1)!;
     assert.equal(sceneEvent.event, "scene");

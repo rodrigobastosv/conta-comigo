@@ -132,31 +132,34 @@ Missing: nothing unattached in the schema.
 
 ## Evaluation set
 
-Done: `npm run eval` runs fourteen fixed openings against the real model, in both
-worlds, and measures words per scene, mean words per sentence, the refrain, the
-choice-label lengths, a short list of constitution breaches, and the rules only an
-invented world can break. Baseline in
-[lib/eval/baseline.json](../lib/eval/baseline.json), now on `v3`.
+Done, and acted on. `npm run eval` runs seventeen fixed openings against the real
+model across all three worlds. Baseline in
+[lib/eval/baseline.json](../lib/eval/baseline.json), now on `v4`.
 
-Missing: acting on what it found, which after the `v3` run is a sharper ask than
-it was. `v3` scores **5/14**, and every failure is one of two rules: the `ouvir`
-sentence floor of 8 words (missed in all ten `ouvir` scenes, mean 7.6, across
-*both* worlds) and the `ouvir` choice-label ceiling of 4 (missed six times, always
-by exactly one word).
+**`v4` scores 16/17.** `v3` scored 5/14, and every one of those failures was one
+of two reading-level rules that Portuguese does not survive: a floor of 8 words
+on the mean `ouvir` sentence, and a 4-word ceiling on choice labels. The floor
+contradicted "uma ideia por frase" and the scenes that broke it were the
+best-written ones — "Tique, tique, tique." is the rhythm of reading aloud, and a
+floor on the mean can only be satisfied by padding it away. The label ceiling
+counted words in a language that spends one on the article and one on the
+preposition where English spends none.
 
-That is no longer a hypothesis about one world's prompt — it is the same result in
-a world nobody wrote by hand. The fix is a prose decision and starts in
-[story-bible.md](story-bible.md): floor 6, ceiling 5, then `lib/eval/rules.ts` to
-match, then re-measure. See
-[decisions.md](decisions.md#what-the-v3-run-found-on-twice-the-evidence).
+Both were fixed once already, in PR #26, and merged into a branch that had
+already been merged away — so the fix never reached `main` and the `v3` run
+measured the rules it was meant to replace. `v4` restores it. See
+[decisions.md](decisions.md#what-the-first-run-found).
 
-Nothing else failed. None of the invented-world rules fired and no case needed a
-second attempt, in either world — the structural half of layer 2b is solid and it
-is the reading-level numbers that are wrong.
+The circus world has a baseline now too: all three of its cases pass, having
+shipped unmeasured.
 
-Still open: whether `EFFORT` should go from `low` to `medium`. Two runs now say no
-— zero regenerations across 24 generations, including four that had to invent a
-world from scratch.
+**One case is left failing on purpose.** "Colocar o chinelo no pé dele" is six
+words against a ceiling of five, and it genuinely ran long. Raising the number
+until the run is green is the goalpost-moving this evaluation exists to prevent.
+
+Still open: whether `EFFORT` should go from `low` to `medium`. Three runs now say
+no — one regeneration across 17 generations, and that one was a schema overrun
+(seven facts where six are allowed), not a quality failure.
 
 ## More worlds
 

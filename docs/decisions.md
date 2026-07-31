@@ -494,6 +494,39 @@ One thing the rules do not catch and a person should watch: both invented
 openings used the helper's name for an **adult character**. It breaks nothing
 today, and it would read badly the day a child uses her own name.
 
+### What the v4 run found, and how the fix got lost
+
+**16/17**, from 5/14. The two reading-level rules were the whole gap, and the
+measurement that settles it: across all eleven `ouvir` scenes the mean sentence
+is **6.2 words, ranging 5.2 to 7.7**. Not one of them reaches the floor of 8 the
+rules used to impose. A rule that every well-formed scene fails is not a
+standard, it is a bug — and the scenes it failed were the best-written ones,
+because "Tique, tique, tique." is the rhythm of reading aloud and a floor on the
+mean can only be satisfied by padding it away.
+
+The same for labels: pt-BR spends a word on the article and one on the
+preposition where English spends none, so "Abrir a gaveta da luva" is the
+approved "Abrir a porta azul" plus a qualifier, not a worse label.
+
+**The uncomfortable part is that this was already fixed.** PR #26 made exactly
+this change on 30 July, with the reasoning above, and merged it into
+`evaluation-set` — a branch that had been merged into `main` thirteen seconds
+earlier. The commits landed on a branch that was already spent, never reached
+`main`, and the `v3` evaluation then measured the rules the fix was meant to
+replace. Six weeks of "the prompt scores 5/14" was a report about lost work.
+
+Two things worth taking from that, beyond the fix:
+
+- **A PR whose base branch is not `main` is a PR that may never land.** It has
+  now happened twice in this repository (#26, and #30). Check the base before
+  merging, not after.
+- **The evaluation did its job both times.** It said the prompt and the rules
+  disagreed, and it kept saying so. What failed was delivery, not measurement.
+
+One case is left failing on purpose — "Colocar o chinelo no pé dele", six words
+against a ceiling of five, which genuinely ran long. Raising the number until
+the run is green is the goalpost-moving this evaluation exists to prevent.
+
 ### The rules are a transcription, not an opinion
 
 [lib/eval/rules.ts](../lib/eval/rules.ts) restates the numbers from

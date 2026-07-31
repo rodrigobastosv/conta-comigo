@@ -189,13 +189,31 @@ than it looks.
 - **The route's own file is untested.** `lib/scene-route.ts` carries the logic and
   is covered; `app/api/scene/route.ts` is a few lines of Next wiring on top of it
   and is not.
-- **The region the functions run in is unmeasured.** Every latency number in
-  [decisions.md](decisions.md) was taken from a laptop in São Paulo, not from a
-  serverless function in whichever region Vercel picked. Moving the functions to
-  `gru1` shortens the hop to the child and lengthens the one to the model, and
-  nobody has measured which way that lands. Do not pin a region on a hunch —
-  `npm run tts:bench` from the deployed function is the thing that would settle
-  it.
+- **The functions and the database are on different continents.** Measured on the
+  live deployment: the function runs in `iad1` (Washington), the Supabase project
+  is in `sa-east-1` (São Paulo), and the child is in Brazil. Beat 1 makes three
+  round trips to the database — `claim_generation`, the profile's limits, the
+  story insert — before the model is called at all, and every one of them crosses
+  that gap.
+
+  First measurements from production, beat 1, `ouvir`, the shop:
+
+  | | time to first token | whole scene |
+  | --- | --- | --- |
+  | cold | 4870 ms | 12.2 s |
+  | warm | 3903 ms | 14.4 s |
+  | warm | 3683 ms | 10.7 s |
+
+  So a cold start costs about a second and the rest is the model thinking. The
+  three database round trips are the part that is ours, and they are the part
+  that a region change would fix.
+
+  **Pinning `gru1` was tried and is not available on the Hobby plan** — the
+  deployment comes back `BLOCKED` with no error message. So this is blocked on
+  billing, not on measurement. Before paying for it, get the number: instrument
+  the route to log the time spent in the archive versus the time spent waiting
+  for the model. If the database round trips are 300 ms of a 3.7 s wait, the
+  region is not the thing to buy.
 - **The table types are hand-written.** [lib/supabase/types.ts](../lib/supabase/types.ts)
   mirrors `supabase/schema.sql` by hand, and a stale type file is worse than none.
   Change both in the same commit, or swap it for the generator's output.
